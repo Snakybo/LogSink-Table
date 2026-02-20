@@ -44,7 +44,8 @@ local TokenType = {
 	Operator = "operator",
 	Table = "table",
 	Comma = "comma",
-	Keyword = "keyword"
+	Keyword = "keyword",
+	Time = "time"
 }
 
 --- @enum FilterOperator
@@ -163,6 +164,17 @@ function QueryParser:Tokenize(filter, ignoreVisualTokens, depth)
 
 	depth = depth or 1
 
+	--- @return Token?
+	local function GetPreviousNonVisualToken()
+		for i = #result, 1, -1 do
+			if not visualTokens[result[i].type] then
+				return result[i]
+			end
+		end
+
+		return nil
+	end
+
 	while cursor <= #filter do
 		local char = filter:sub(cursor, cursor)
 
@@ -248,6 +260,16 @@ function QueryParser:Tokenize(filter, ignoreVisualTokens, depth)
 				startIndex = cursor,
 				endIndex = endIndex
 			}
+
+			local previous = GetPreviousNonVisualToken()
+
+			if previous ~= nil and previous.type == TokenType.Keyword then
+				local upper = previous.value:upper()
+
+				if upper == SINCE or upper == UNTIL then
+					token.type = TokenType.Time
+				end
+			end
 		elseif char:match("[%w%.%:]") then
 			local _, endIndex = filter:find('^[%w%.%:]+', cursor)
 
@@ -258,12 +280,16 @@ function QueryParser:Tokenize(filter, ignoreVisualTokens, depth)
 				endIndex = endIndex
 			}
 
+			local lower = token.value:lower()
 			local upper = token.value:upper()
+			local previous = GetPreviousNonVisualToken()
 
 			if keywords[upper] then
 				token.type = TokenType.Keyword
 			elseif operators[upper] then
 				token.type = TokenType.Operator
+			elseif previous ~= nil and previous.type == TokenType.Time and (TimeframeScales[lower] or lower == AGO) then
+				token.type = TokenType.Time
 			elseif upper == NIL then
 				token.type = TokenType.Nil
 			end
@@ -314,51 +340,55 @@ function QueryParser:ParseTokens(tokens)
 
 	while current <= #tokens do
 		local token = tokens[current]
-		local upper = token.value:upper()
 
-		if upper == OR then
-			active = nil
-			table.insert(result.compounds, {})
-		elseif upper == AND then
-			active = nil
-		elseif upper == SINCE or upper == UNTIL then
-			local key = upper:lower()
+		if token.type == TokenType.Keyword then
+			local upper = token.value:upper()
 
-			local valueToken = tokens[current + 1]
-			local scaleToken = tokens[current + 2]
-			local step = 1
+			if upper == OR then
+				active = nil
+				table.insert(result.compounds, {})
+			elseif upper == AND then
+				active = nil
+			elseif upper == SINCE or upper == UNTIL then
+				local key = upper:lower()
 
-			--- @type TimeValue?
-			local timeframe
+				local valueToken = tokens[current + 1]
+				local scaleToken = tokens[current + 2]
+				local agoToken = tokens[current + 3]
+				local step = 1
 
-			if valueToken ~= nil and scaleToken ~= nil then
-				timeframe = {
-					value = tonumber(valueToken.value),
-					scale = scaleToken.value
-				}
+				--- @type TimeValue?
+				local timeframe
 
-				if tokens[current + step] ~= nil and tokens[current + step].value:lower() == AGO then
-					step = 2
+				if valueToken ~= nil and valueToken.type == TokenType.Time and scaleToken ~= nil and scaleToken.type == TokenType.Time then
+					timeframe = {
+						value = tonumber(valueToken.value),
+						scale = scaleToken.value
+					}
+
+					step = (agoToken ~= nil and agoToken.type == TokenType.Time) and 3 or 2
+				elseif valueToken ~= nil and valueToken.type == TokenType.Time then
+					timeframe = {
+						value = valueToken.value,
+						isAbsolute = true
+					}
 				end
-			elseif valueToken ~= nil then
-				timeframe = {
-					value = valueToken.value,
-					isAbsolute = true
-				}
+
+				if timeframe == nil or timeframe.value == nil then
+					return "unable to parse time restrictor"
+				elseif tonumber(timeframe.value) and tonumber(timeframe.value) <= 0 then
+					return "invalid time value: " .. tostring(timeframe.value)
+				elseif TimeframeScales[timeframe.scale] == nil and not timeframe.isAbsolute then
+					return "invalid time scale: " .. tostring(timeframe.scale)
+				end
+
+				result.timeframe = result.timeframe or {}
+				result.timeframe[key] = timeframe
+
+				current = current + step
+			else
+				return "Unknown keyword: " .. upper
 			end
-
-			if timeframe == nil or timeframe.value == nil then
-				return "unable to parse time restrictor"
-			elseif tonumber(timeframe.value) and tonumber(timeframe.value) <= 0 then
-				return "invalid time value: " .. tostring(timeframe.value)
-			elseif TimeframeScales[timeframe.scale] == nil and not timeframe.isAbsolute then
-				return "invalid time scale: " .. tostring(timeframe.scale)
-			end
-
-			result.timeframe = result.timeframe or {}
-			result.timeframe[key] = timeframe
-
-			current = current + step
 		else
 			if active ~= nil then
 				return "unfinished compound, did you forget AND/OR?"
@@ -559,6 +589,7 @@ function QueryParser:TestSuite()
 	Test('charName NOT LIKE mana', false)
 	Test('charName NOT LIKE ".*thas"', false)
 	Test('charName NOT LIKE ".*ghar"', true)
+	Test('minutes = 60', false)
 	Test('SINCE 360 seconds ago', false)
 	Test('SINCE 1 minute ago', false)
 	Test('SINCE 1 hour ago', true)

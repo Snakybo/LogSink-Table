@@ -278,7 +278,7 @@ function FilterTemplate:EvaluateTimeframe(entry)
 	if self.timeframe["until"] ~= nil then
 		local seconds = GetSecondsFromTimeValue(self.timeframe["until"])
 
-		if abs(delta) <= seconds then
+		if abs(delta) < seconds then
 			return false
 		end
 	end
