@@ -55,8 +55,6 @@ end
 --- @return FilterFrame
 function FilterFrame.Create(parent)
 	local base = CreateFrame("Frame", nil, parent)
-	base:SetPoint("TOPLEFT", parent, "TOPLEFT")
-	base:SetPoint("BOTTOMRIGHT", parent, "TOPRIGHT", 0, -20)
 
 	local result = Mixin(base, FilterFrame)
 	result:Init()
@@ -64,6 +62,7 @@ function FilterFrame.Create(parent)
 	return result
 end
 
+--- @private
 function FilterFrame:Init()
 	self.editBox = CreateFrame("EditBox", nil, self, "SearchBoxTemplate")
 	self.editBox:SetPoint("TOPLEFT", self, "TOPLEFT", 5, 0)

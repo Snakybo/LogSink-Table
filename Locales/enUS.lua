@@ -25,3 +25,7 @@ L["Level"] = true
 L["Addon"] = true
 L["Message"] = true
 L["Log Viewer"] = true
+L["Processed %d entries and found %d matches in %.2fms"] = true
+L["Search more..."] = true
+L["Go to live"] = true
+L["No new entries"] = true

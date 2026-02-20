@@ -69,59 +69,10 @@ local DEFAULTS = {
 }
 
 local COLUMN_MIN_WIDTH = 50
-local ROW_HEIGHT = 22
 local SCROLL_THROTTLE = 0.3
 
 --- @type ColumnConfig[]
 Window.columns = CopyTable(DEFAULTS)
-
---- @private
---- @param text? string
-function Window:UpdateQueryString(text)
-	if text ~= nil then
-		local filter = LogSinkTable:CreateFilterFromString(text)
-		if type(filter) == "string" then
-			-- TODO: show error message
-			error(filter)
-			return
-		end
-
-		self.bufferReader:SetFilter(filter)
-	else
-		self.bufferReader:SetFilter(nil)
-	end
-
-	local chunk, scanned = self.bufferReader:Load()
-	-- TODO: show scanned + found message
-
-	self.dataProvider:Flush()
-	self.dataProvider:InsertTable(chunk)
-
-	self.initialized = true
-	self.wantsScroll = 0
-
-	self.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
-end
-
-function Window:CreateWindow()
-	self:CreateFrame()
-	self:CreateContentContainer()
-
-	self.filter = Addon.FilterFrame.Create(self.container)
-	self.filter.onQueryStringChanged = function(text)
-		self:UpdateQueryString(text)
-	end
-
-	self:CreateScrollBox()
-end
-
-function Window:ShowDefaultStatus()
-
-end
-
-function Window:ShowScrollStatus(scanned, found)
-
-end
 
 function Window:Open()
 	if self:IsOpen() then
@@ -143,13 +94,6 @@ end
 
 function Window:IsOpen()
 	return self.frame ~= nil and self.frame:IsVisible()
-end
-
-function Window:RenderTable()
-	if not self:IsOpen() then
-		return
-	end
-
 end
 
 --- @param key string
@@ -174,8 +118,6 @@ function Window:AddColumn(key)
 	}
 
 	table.insert(self.columns, column)
-
-	self:RenderTable()
 end
 
 --- @param key string
@@ -184,8 +126,6 @@ function Window:RemoveColumn(key)
 
 	if contains then
 		table.remove(self.columns, position)
-
-		self:RenderTable()
 	end
 end
 
@@ -197,8 +137,6 @@ function Window:ReorderColumn(key, position)
 	if contains then
 		local column = table.remove(self.columns, originalPosition)
 		table.insert(self.columns, position, column)
-
-		self:RenderTable()
 	end
 end
 
@@ -217,8 +155,61 @@ end
 
 function Window:ResetColumns()
 	self.columns = CopyTable(DEFAULTS)
+end
 
-	self:RenderTable()
+--- @private
+function Window:CreateWindow()
+	self:CreateFrame()
+	self:CreateContentContainer()
+
+	self.filter = Addon.FilterFrame.Create(self.container)
+	self.filter:SetPoint("TOPLEFT", self.container, "TOPLEFT")
+	self.filter:SetPoint("BOTTOMRIGHT", self.container, "TOPRIGHT", 0, -20)
+	self.filter.onQueryStringChanged = function(text)
+		self:UpdateQueryString(text)
+	end
+
+	self.status = Addon.StatusFrame.Create(self.container)
+	self.status:SetPoint("TOPLEFT", self.container, "BOTTOMLEFT", 0, 20)
+	self.status:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT")
+	self.status.onSearchButtonClick = function()
+		self:LoadTableChunk(-1)
+
+		if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
+			self.status:ShowSearchButton(true)
+		else
+			self.status:ShowSearchButton(false)
+		end
+	end
+	self.status.onLiveButtonClick = function()
+		self:LoadTable()
+
+		if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
+			self.status:ShowSearchButton(true)
+		else
+			self.status:ShowSearchButton(false)
+		end
+	end
+
+	self.table = Addon.TableFrame.Create(self.container)
+	self.table:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
+	self.table:SetPoint("BOTTOMRIGHT", self.status, "TOPRIGHT")
+	self.table.onScroll = function(position, direction)
+		if not self.initialized then
+			return
+		end
+
+		if position < 1 and self.table.scrollBar:HasScrollableExtent() then
+			self.bufferReader.tail = false
+			self.status:ShowLiveButton(true)
+		elseif position >= 1 and not self.bufferReader:HasNewLogs() then
+			self.bufferReader.tail = true
+			self.status:ShowLiveButton(false)
+		end
+
+		self.scrollDirection = direction
+	end
+	self.table.columns = self.columns
 end
 
 --- @private
@@ -300,109 +291,112 @@ function Window:CreateContentContainer()
 end
 
 --- @private
-function Window:CreateScrollBox()
-	self.scrollBar = CreateFrame("EventFrame", nil, self.container, "MinimalScrollBar")
-    self.scrollBar:SetPoint("TOPRIGHT", self.filter, "BOTTOMRIGHT", -10, -10)
-    self.scrollBar:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT", -10, 10)
+function Window:LoadTable()
+	self.initialized = false
+	self.table.dataProvider:Flush()
 
-	self.scrollBox = CreateFrame("Frame", nil, self.container, "WowScrollBoxList")
-    self.scrollBox:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
-    self.scrollBox:SetPoint("BOTTOMRIGHT", self.scrollBar, "BOTTOMLEFT", -10, 0)
-	self.scrollBox:RegisterCallback("OnScroll", function(...) self:ScrollBox_OnScroll(...) end)
+	if not self.hasFilterError then
+		local chunk, scanned, elapsedMs = self.bufferReader:Load()
+		self.status:SetTemporaryText(Addon.L["Processed %d entries and found %d matches in %.2fms"]:format(scanned, #chunk, elapsedMs))
+		self.status:SetText("")
 
-	local view = CreateScrollBoxListLinearView()
-	view:SetElementExtent(ROW_HEIGHT)
-	view:SetElementInitializer("LogTableRowTemplate", function(button, data)
-		self:CreateScrollBoxRow(button, data)
-	end)
+		self.lastScrollTime = GetTime()
 
-	ScrollUtil.InitScrollBoxListWithScrollBar(self.scrollBox, self.scrollBar, view)
+		self.table.dataProvider:InsertTable(chunk)
 
-	self.dataProvider = CreateDataProvider()
-	self.dataProvider:SetSortComparator(function(l, r)
-		if l.time == r.time then
-			return l.sequenceId < r.sequenceId
+		if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
+			self.status:ShowSearchButton(true)
+		else
+			self.status:ShowSearchButton(false)
 		end
 
-		return l.time < r.time
-	end, true)
+		self.status:ShowLiveButton(false)
+	end
 
-    self.scrollBox:SetDataProvider(self.dataProvider)
+	self.initialized = true
+	self.scrollDirection = 0
+
+	self.table.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
 end
 
 --- @private
---- @param frame TableRowFrame
---- @param logEntry LibLog-1.0.LogMessage
-function Window:CreateScrollBoxRow(frame, logEntry)
-	local cells = frame.cells
-
-	for i, colConfig in ipairs(self.columns) do
-		if not cells[i] then
-			cells[i] = CreateFrame("Frame", nil, frame, "LogTableCellTemplate")
-		end
-
-		local cell = cells[i]
-		cell:Show()
-
-		if i == 1 then
-			cell:SetPoint("LEFT", frame, "LEFT", 0, 0)
-		else
-			cell:SetPoint("LEFT", frame.cells[i - 1], "RIGHT", 0, 0)
-		end
-
-		if i < #self.columns then
-			cell:SetWidth(colConfig.width or 100)
-		else
-			cell:SetPoint("RIGHT", frame:GetParent(), "RIGHT")
-		end
-
-		local value = colConfig.get and colConfig.get(logEntry) or logEntry[colConfig.key]
-		cell.Text:SetText(tostring(value or ""))
+--- @param direction integer
+function Window:LoadTableChunk(direction)
+	if self.hasFilterError then
+		return
 	end
 
-	for i = #self.columns + 1, #frame.cells do
-		frame.cells[i]:Hide()
+	local chunk, scanned, elapsedMs
+
+	if direction > 0 then
+		chunk, scanned, elapsedMs = self.bufferReader:LoadNext()
+		local index = self.table.dataProvider:GetSize()
+
+		if #chunk > 0 then
+			self.table.dataProvider:InsertTable(chunk)
+			self.table.scrollBox:ScrollToElementDataIndex(index, ScrollBoxConstants.AlignEnd, 0, ScrollBoxConstants.NoScrollInterpolation)
+		end
+	else
+		chunk, scanned, elapsedMs = self.bufferReader:LoadPrevious()
+
+		if #chunk > 0 then
+			self.table.dataProvider:InsertTable(chunk)
+			self.table.scrollBox:ScrollToElementDataIndex(#chunk, ScrollBoxConstants.AlignBegin, 0, ScrollBoxConstants.NoScrollInterpolation)
+		end
 	end
 
-	frame:SetScript("OnEnter", function() frame.Highlight:Show() end)
-	frame:SetScript("OnLeave", function() frame.Highlight:Hide() end)
+	if chunk ~= nil and scanned ~= nil and elapsedMs ~= nil then
+		if scanned > 0 then
+			self.status:SetTemporaryText(Addon.L["Processed %d entries and found %d matches in %.2fms"]:format(scanned, #chunk, elapsedMs))
+		elseif not self.bufferReader:HasPreviousLogs() then
+			self.status:SetTemporaryText(Addon.L["No new entries"])
+		end
+	end
+end
 
-	frame:SetScript("OnClick", function()
-		UIParentLoadAddOn("Blizzard_DebugTools")
-		DisplayTableInspectorWindow(logEntry)
-	end)
+--- @private
+--- @param text? string
+function Window:UpdateQueryString(text)
+	self.hasFilterError = false
+	self.initialized = false
+
+	if text ~= nil then
+		local filter = LogSinkTable:CreateFilterFromString(text)
+
+		if type(filter) == "string" then
+			self.hasFilterError = true
+			self.status:SetText("|cffff0000" .. Addon.L["Filter error: %s"]:format(filter))
+		else
+			self.bufferReader:SetFilter(filter)
+		end
+	else
+		self.bufferReader:SetFilter(nil)
+	end
+
+	self:LoadTable()
 end
 
 --- @private
 function Window:Frame_OnUpdate()
 	local now = GetTime()
 
-	if self.bufferReader:HasNewLogs() then
-		local chunk = self.bufferReader:LoadNext()
-
-		self.dataProvider:InsertTable(chunk)
-		self.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
+	if not self.initialized or self.hasFilterError then
+		return
 	end
 
-	if self.wantsScroll ~= 0 and now >= (self.lastScrollTime or 0) + SCROLL_THROTTLE then
-		if self.wantsScroll > 0 then
-			local chunk, scanned = self.bufferReader:LoadNext()
-			local index = self.dataProvider:GetSize()
+	if self.bufferReader.tail and self.bufferReader:HasNewLogs() then
+		local chunk = self.bufferReader:LoadNext()
 
-			if #chunk > 0 then
-				self.dataProvider:InsertTable(chunk)
-				self.scrollBox:ScrollToElementDataIndex(index, ScrollBoxConstants.AlignEnd, 0, ScrollBoxConstants.NoScrollInterpolation)
-			end
-		elseif self.wantsScroll < 0 then
-			local chunk, scanned = self.bufferReader:LoadPrevious()
-
-			if #chunk > 0 then
-				self.dataProvider:InsertTable(chunk)
-				self.scrollBox:ScrollToElementDataIndex(#chunk, ScrollBoxConstants.AlignBegin, 0, ScrollBoxConstants.NoScrollInterpolation)
-			end
+		if #chunk > 0 then
+			self.table.dataProvider:InsertTable(chunk)
+			self.table.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
 		end
+	end
 
-		self.wantsScroll = 0
+	if not self.bufferReader.tail and self.scrollDirection ~= 0 and now >= (self.lastScrollTime or 0) + SCROLL_THROTTLE then
+		self:LoadTableChunk(self.scrollDirection)
+
+		self.scrollDirection = 0
 		self.lastScrollTime = now
 	end
 end
@@ -414,24 +408,8 @@ function Window:Frame_CloseButton_OnClick()
 	self.bufferReader:Dispose()
 	self.bufferReader = nil
 
-	self.dataProvider:Flush()
+	self.table.dataProvider:Flush()
 	self.frame:Hide()
-end
-
---- @private
---- @param scrollPercentage number
-function Window:ScrollBox_OnScroll(_, scrollPercentage)
-	local now = GetTime()
-
-	if not self.initialized then
-		return
-	end
-
-	if scrollPercentage < 1 then
-		self.bufferReader.tail = false
-	end
-
-	self.wantsScroll = scrollPercentage <= 0 and -1 or scrollPercentage >= 1 and 1 or 0
 end
 
 Addon.Window = Window

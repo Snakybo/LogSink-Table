@@ -11,9 +11,11 @@ local SCAN_SIZE = 10000
 --- @field private buffer LibLog-1.0.LogMessage[]
 --- @field private filter? Filter
 local Reader = {
+	first = 1,
+	last = 1,
 	tail = true,
 	chunkSize = CHUNK_SIZE,
-	scanSize = SCAN_SIZE,
+	scanSize = SCAN_SIZE
 }
 
 function Reader:Dispose()
@@ -25,6 +27,7 @@ end
 
 --- @return LibLog-1.0.LogMessage[] chunk
 --- @return integer scanned
+--- @return integer elapsedMs
 function Reader:Load()
 	self.first = 1
 	self.last = #self.buffer
@@ -35,21 +38,23 @@ end
 
 --- @return LibLog-1.0.LogMessage[] chunk
 --- @return integer found
+--- @return integer elapsedMs
 function Reader:LoadPrevious()
-	local result, scanned = self:LoadImpl(self.first, -1)
+	local result, scanned, elapsedMs = self:LoadImpl(self.first, -1)
 
 	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, first = self.first }, function()
 		LogSinkTable:LogVerbose("Loaded previous chunk")
 	end)
 
 	self.tail = false
-	return result, scanned
+	return result, scanned, elapsedMs
 end
 
 --- @return LibLog-1.0.LogMessage[] chunk
 --- @return integer found
+--- @return integer elapsedMs
 function Reader:LoadNext()
-	local result, scanned = self:LoadImpl(self.last, 1)
+	local result, scanned, elapsedMs = self:LoadImpl(self.last, 1)
 
 	self.tail = self.last == #self.buffer
 
@@ -57,12 +62,17 @@ function Reader:LoadNext()
 		LogSinkTable:LogVerbose("Loaded next chunk")
 	end)
 
-	return result, scanned
+	return result, scanned, elapsedMs
 end
 
 --- @return boolean
 function Reader:HasNewLogs()
-	return self.tail and self.last < #self.buffer
+	return self.last < #self.buffer
+end
+
+--- @return boolean
+function Reader:HasPreviousLogs()
+	return self.first > 1
 end
 
 --- @param filter? Filter
@@ -84,7 +94,9 @@ end
 --- @param dir number
 --- @return LibLog-1.0.LogMessage[] chunk
 --- @return integer scanned
+--- @return integer elapsedMs
 function Reader:LoadImpl(start, dir)
+	local now = debugprofilestop()
 	local result = {}
 	local scanned = 0
 
@@ -116,7 +128,7 @@ function Reader:LoadImpl(start, dir)
 		end
 	end
 
-	return result, scanned
+	return result, scanned, debugprofilestop() - now
 end
 
 --- @return ChunkedBufferReader
