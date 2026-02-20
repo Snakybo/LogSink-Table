@@ -78,6 +78,11 @@ end
 local function IsEqualTo(entry, lhs, rhs)
 	local left = GetOptionValue(entry, lhs)
 	local right = GetOptionValue(entry, rhs)
+
+	if left == nil and right == nil then
+		return false
+	end
+
 	return left == right
 end
 
@@ -88,6 +93,11 @@ end
 local function IsNotEqualTo(entry, lhs, rhs)
 	local left = GetOptionValue(entry, lhs)
 	local right = GetOptionValue(entry, rhs)
+
+	if left == nil and right == nil then
+		return false
+	end
+
 	return left ~= right
 end
 
