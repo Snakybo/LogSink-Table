@@ -74,56 +74,82 @@ function Buffer:GenerateMockData(count)
 		return tbl[math.random(1, #tbl)]
 	end
 
-	self.mock = true
+	local BUDGET_MS = 33
 
-	for i = 1, count do
-		--- @type LibLog-1.0.LogMessage
-		local entry = {
-			message = "Message " .. (count - i + 1) .. " out of " .. count,
-			addon = Randomize(addons),
-			level = math.random(1, 6),
-			time = time() - i,
-			sequenceId = 1,
-			properties = {}
-		}
+	local remaining = count
+	local lastUpdateMessage = 0
 
-		if math.random() > 0.5 then
-			entry.properties.charName = Randomize(charNames)
-		end
+	self.mockFrame = self.mockFrame or CreateFrame("Frame")
+	self.mockFrame:SetScript("OnUpdate", function()
+		local start = debugprofilestop()
 
-		if math.random() > 0.5 then
-			entry.properties.realmName = Randomize(realms)
-		end
+		while (debugprofilestop() - start < BUDGET_MS and remaining > 0) do
+			--- @type LibLog-1.0.LogMessage
+			local entry = {
+				message = "",
+				addon = Randomize(addons),
+				level = math.random(1, 6),
+				time = time() - (count - remaining),
+				sequenceId = 1,
+				properties = {}
+			}
 
-		if math.random() > 0.5 then
-			entry.properties.health = math.random(0, 1000)
-		end
-
-		if math.random() > 0.5 then
-			entry.properties.mana = math.random(0, 500)
-		end
-
-		if math.random() > 0.5 then
-			local partySize = math.random(1, 5)
-			local party = {}
-
-			while #party < partySize do
-				local value = Randomize(charNames)
-
-				if not tContains(party, value) then
-					table.insert(party, value)
-				end
+			if math.random() > 0.5 then
+				entry.properties.charName = Randomize(charNames)
+				entry.message = entry.message .. "My name is " .. entry.properties.charName .. " "
 			end
 
-			entry.properties.party = party
+			if math.random() > 0.5 then
+				entry.properties.realmName = Randomize(realms)
+				entry.message = entry.message .. "My realm is " .. entry.properties.realmName .. " "
+			end
+
+			if math.random() > 0.5 then
+				entry.properties.health = math.random(0, 1000)
+			end
+
+			if math.random() > 0.5 then
+				entry.properties.mana = math.random(0, 500)
+			end
+
+			if math.random() > 0.5 then
+				local partySize = math.random(1, 5)
+				local party = {}
+
+				while #party < partySize do
+					local value = Randomize(charNames)
+
+					if not tContains(party, value) then
+						table.insert(party, value)
+					end
+				end
+
+				entry.properties.party = party
+			end
+
+			if #entry.message == 0 then
+				entry.message = "Message " .. (count - remaining) .. " out of " .. count
+			else
+				entry.message = entry.message:trim()
+			end
+
+			table.insert(result, 1, entry)
+			remaining = remaining - 1
 		end
 
-		table.insert(result, 1, entry)
-	end
+		if remaining <= 0 then
+			self.mockFrame:Hide()
+			self.mock = true
+			self:SetBuffer(result)
 
-	self:SetBuffer(result)
-
-	LogSinkTable:LogInfo("Generated {count} mock log entries", count)
+			LogSinkTable:LogInfo("Generated {count} mock log entries", count)
+		elseif debugprofilestop() - lastUpdateMessage > 2500 then
+			lastUpdateMessage = debugprofilestop()
+			local progress = (1 - (remaining / count)) * 100
+			LogSinkTable:LogInfo("Generating {count} mock log entries, {progress}% complete", count, progress)
+		end
+	end)
+	self.mockFrame:Show()
 end
 
 function Buffer:IsMockModeEnabled()
