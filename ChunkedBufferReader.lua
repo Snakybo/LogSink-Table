@@ -85,6 +85,10 @@ function Reader:SetBuffer(buffer)
 	end
 end
 
+function Reader:GetNumProcessed()
+	return self.last - self.first + 1, #self.buffer
+end
+
 function Reader:OnMessageAdded()
 	if self.onMessageAdded ~= nil then
 		self.onMessageAdded()

@@ -1,6 +1,16 @@
 --- @class Addon
 local Addon = select(2, ...)
 
+--- @class TableCellFrame : Frame
+--- @field public Text FontString
+
+--- @class TableRowFrame : Frame
+--- @field public cells TableCellFrame[]
+--- @field public Highlight Texture
+
+--- @class TableRowHeaderFrame : Frame
+--- @field public Text FontString
+
 --- @class TableFrame : Frame
 --- @field public onScroll? fun(position: number, direction: integer)
 --- @field public columns ColumnConfig[]
@@ -34,14 +44,26 @@ function TableFrame:Init()
 
 	local view = CreateScrollBoxListLinearView()
 	view:SetElementExtent(ROW_HEIGHT)
-	view:SetElementInitializer("LogTableRowTemplate", function(button, data)
-		self:CreateScrollBoxRow(button, data)
+	view:SetElementFactory(function(factory, node)
+		if node.isHeader then
+			factory("LogTableRowHeaderTemplate", function(frame)
+				self:CreateHeaderRow(frame)
+			end)
+		else
+			factory("LogTableRowTemplate", function(frame, element)
+				self:CreateScrollBoxRow(frame, element)
+			end)
+		end
 	end)
 
 	ScrollUtil.InitScrollBoxListWithScrollBar(self.scrollBox, self.scrollBar, view)
 
 	self.dataProvider = CreateDataProvider()
 	self.dataProvider:SetSortComparator(function(l, r)
+		if l.isHeader and not r.isHeader then
+			return true
+		end
+
 		if l.time == r.time then
 			return l.sequenceId < r.sequenceId
 		end
@@ -50,6 +72,14 @@ function TableFrame:Init()
 	end, true)
 
     self.scrollBox:SetDataProvider(self.dataProvider)
+end
+
+--- @private
+--- @param frame TableRowHeaderFrame
+function TableFrame:CreateHeaderRow(frame)
+	frame.Text:SetText(Addon.L["Click to search further back..."])
+
+	frame:SetScript("OnClick", function() self:HeaderRow_OnClick() end)
 end
 
 --- @private
@@ -88,7 +118,7 @@ function TableFrame:CreateScrollBoxRow(frame, entry)
 
 	frame:SetScript("OnEnter", function(...) self:LogRow_OnEnter(...) end)
 	frame:SetScript("OnLeave", function(...) self:LogRow_OnLeave(...)  end)
-	frame:SetScript("OnClick", function(...) self:LogRow_OnClick(entry) end)
+	frame:SetScript("OnClick", function() self:LogRow_OnClick(entry) end)
 end
 
 --- @private
@@ -96,6 +126,13 @@ end
 function TableFrame:ScrollBox_OnScroll(_, scrollPercentage)
 	if self.onScroll ~= nil then
 		self.onScroll(scrollPercentage, scrollPercentage <= 0 and -1 or scrollPercentage >= 1 and 1 or 0)
+	end
+end
+
+--- @private
+function TableFrame:HeaderRow_OnClick()
+	if self.onScroll ~= nil then
+		self.onScroll(0, -1)
 	end
 end
 
