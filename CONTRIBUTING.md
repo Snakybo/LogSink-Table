@@ -8,7 +8,6 @@ by downloading a recent release, and copying the libraries into your repository.
 * [AceAddon-3.0](https://www.wowace.com/projects/ace3)
 * [AceConsole-3.0](https://www.wowace.com/projects/ace3)
 * [AceEvent-3.0](https://www.wowace.com/projects/ace3)
-* [AceGUI-3.0](https://www.wowace.com/projects/ace3)
 * [AceLocale-3.0](https://www.wowace.com/projects/ace3)
 * [CallbackHandler-1.0](https://www.wowace.com/projects/callbackhandler)
 * [LibLog-1.0](https://github.com/Snakybo/LibLog-1.0)
