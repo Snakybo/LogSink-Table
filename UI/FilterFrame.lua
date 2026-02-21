@@ -3,7 +3,7 @@ local Addon = select(2, ...)
 
 --- @class FilterFrame : Frame
 --- @field public onQueryStringChanged? fun(query: string)
---- @field private editBox EditBox
+--- @field private editBox SearchBoxTemplate
 --- @field private textContainer Frame
 --- @field private cursor Texture
 --- @field private cursorBlinkGroup AnimationGroup
@@ -64,13 +64,10 @@ end
 
 --- @private
 function FilterFrame:Init()
-	self.editBox = CreateFrame("EditBox", nil, self, "SearchBoxTemplate")
+	self.editBox = CreateFrame("EditBox", nil, self, "SearchBoxTemplate") --[[@as SearchBoxTemplate]]
 	self.editBox:SetPoint("TOPLEFT", self, "TOPLEFT", 5, 0)
 	self.editBox:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT")
 	self.editBox:SetText(LogSinkTableDB.currentFilter or "")
-	self.editBox:SetMultiLine(false)
-	self.editBox:SetAutoFocus(false)
-	self.editBox:SetFontObject("ChatFontNormal")
 	self.editBox:SetTextColor(0, 0, 0, 0)
 	self.editBox:SetCursorPosition(0)
 	self.editBox:SetHistoryLines(20)
@@ -79,12 +76,13 @@ function FilterFrame:Init()
 	self.editBox:SetScript("OnCursorChanged", function(_, x) self:EditBox_OnCursorChanged(x) end)
 	self.editBox:SetScript("OnEditFocusGained", function() self:EditBox_OnEditFocusGained() end)
 	self.editBox:SetScript("OnEditFocusLost", function() self:EditBox_OnEditFocusLost() end)
-
-	local insetL, insetR = self.editBox:GetTextInsets()
+	self.editBox.Instructions:SetText(Addon.L["Search logs"])
+	self.editBox.clearButton:HookScript("OnClick", function() self:EditBox_ClearButton_OnClick() end)
+	self.editBoxInsetL, self.editBoxInsetR = self.editBox:GetTextInsets()
 
 	self.textContainer = CreateFrame("Frame", nil, self.editBox)
-	self.textContainer:SetPoint("TOPLEFT", self.editBox, "TOPLEFT", insetL, 0)
-	self.textContainer:SetPoint("BOTTOMRIGHT", self.editBox, "BOTTOMRIGHT", insetR - 6, 0)
+	self.textContainer:SetPoint("TOPLEFT", self.editBox, "TOPLEFT", self.editBoxInsetL, 0)
+	self.textContainer:SetPoint("BOTTOMRIGHT", self.editBox, "BOTTOMRIGHT", self.editBoxInsetR - 6, 0)
 	self.textContainer:SetClipsChildren(true)
 
 	self.cursor = self.textContainer:CreateTexture(nil, "OVERLAY")
@@ -164,6 +162,7 @@ end
 --- @private
 function FilterFrame:EditBox_OnTextChanged()
 	SearchBoxTemplate_OnTextChanged(self.editBox)
+
 	self:SyncEditBox()
 end
 
@@ -172,9 +171,8 @@ end
 function FilterFrame:EditBox_OnCursorChanged(x)
 	local text = self.editBox:GetText()
 	local pos = self.editBox:GetCursorPosition()
-	local inset = self.editBox:GetTextInsets()
 
-	self.cursor:SetPoint("TOPLEFT", self.editBox, "TOPLEFT", inset + x, -3)
+	self.cursor:SetPoint("TOPLEFT", self.editBox, "TOPLEFT", self.editBoxInsetL + x, -3)
 
 	local widthToCursor = 0
 	if pos > 0 then
@@ -183,7 +181,7 @@ function FilterFrame:EditBox_OnCursorChanged(x)
 	end
 
 	-- TODO: this has some pixel-shifting when scrolling through the text.. solve somehow
-	local offset = inset - widthToCursor
+	local offset = self.editBoxInsetL - widthToCursor
 
 	self.text:SetPoint("TOPLEFT", self.editBox, "TOPLEFT", offset, 0)
 	self.text:SetPoint("BOTTOMRIGHT", self.editBox, "BOTTOMRIGHT", 0, 0)
@@ -194,14 +192,23 @@ end
 
 --- @private
 function FilterFrame:EditBox_OnEditFocusGained()
+	SearchBoxTemplate_OnEditFocusGained(self.editBox)
+
 	self.cursor:Show();
 	self.cursorBlinkGroup:Play()
 end
 
 --- @private
 function FilterFrame:EditBox_OnEditFocusLost()
+	SearchBoxTemplate_OnEditFocusLost(self.editBox)
+
 	self.cursor:Hide();
 	self.cursorBlinkGroup:Stop()
+end
+
+--- @private
+function FilterFrame:EditBox_ClearButton_OnClick()
+	self:EditBox_OnEnterPressed()
 end
 
 Addon.FilterFrame = FilterFrame

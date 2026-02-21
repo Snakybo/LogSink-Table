@@ -30,3 +30,5 @@ L["Processed %d out of %d entries"] = true
 L["Click to search further back..."] = true
 L["Go to live"] = true
 L["No new entries"] = true
+L["Search logs"] = true
+L["Filter error: %s"] = true
