@@ -1,8 +1,8 @@
 --- @class Addon
 local Addon = select(2, ...)
 
-local CHUNK_SIZE = 100
-local SCAN_SIZE = 10000
+local CHUNK_SIZE = 1000
+local SCAN_BUDGET_MS = (1 / 30) * 1000
 
 --- @class ChunkedBufferReader : BufferReader
 --- @field public onBufferSet? fun()
@@ -15,7 +15,7 @@ local Reader = {
 	first = 1,
 	last = 1,
 	chunkSize = CHUNK_SIZE,
-	scanSize = SCAN_SIZE
+	scanBudgetMs = SCAN_BUDGET_MS
 }
 
 function Reader:Dispose()
@@ -106,10 +106,10 @@ function Reader:LoadImpl(start, dir)
 	local result = {}
 	local scanned = 0
 
-	for i = 1, self.scanSize do
-		local current = start + (i * dir)
+	while #result < self.chunkSize and debugprofilestop() - now < self.scanBudgetMs do
+		local current = start + ((scanned + 1) * dir)
 
-		if #result >= self.chunkSize or current > #self.buffer or current <= 0 then
+		if current > #self.buffer or current <= 0 then
 			break
 		end
 

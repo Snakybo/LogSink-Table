@@ -81,7 +81,7 @@ function Buffer:GenerateMockData(count)
 		return tbl[math.random(1, #tbl)]
 	end
 
-	local BUDGET_MS = 33
+	local BUDGET_MS = (1 / 30) * 1000
 
 	local remaining = count
 	local lastUpdateMessage = 0
