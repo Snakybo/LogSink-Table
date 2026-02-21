@@ -284,6 +284,8 @@ function Window:InitializeTable()
 		self.status:SetText(Addon.L["Processed %d out of %d entries"]:format(self.bufferReader:GetNumProcessed()))
 		self.lastScrollTime = GetTime()
 		self.tail = true
+		self.searchButtonVisible = false
+		self.hasMessagesPending = false
 		self.table.dataProvider:InsertTable(chunk)
 	end
 
