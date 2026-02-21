@@ -6,6 +6,7 @@ local SCAN_SIZE = 10000
 
 --- @class ChunkedBufferReader : BufferReader
 --- @field public onBufferSet? fun()
+--- @field public onMessageAdded? fun()
 --- @field private first integer
 --- @field private last integer
 --- @field private buffer LibLog-1.0.LogMessage[]
@@ -13,7 +14,6 @@ local SCAN_SIZE = 10000
 local Reader = {
 	first = 1,
 	last = 1,
-	tail = true,
 	chunkSize = CHUNK_SIZE,
 	scanSize = SCAN_SIZE
 }
@@ -31,7 +31,6 @@ end
 function Reader:Load()
 	self.first = 1
 	self.last = #self.buffer
-	self.tail = true
 
 	return self:LoadImpl(self.last + 1, -1)
 end
@@ -46,7 +45,6 @@ function Reader:LoadPrevious()
 		LogSinkTable:LogVerbose("Loaded previous chunk")
 	end)
 
-	self.tail = false
 	return result, scanned, elapsedMs
 end
 
@@ -56,9 +54,7 @@ end
 function Reader:LoadNext()
 	local result, scanned, elapsedMs = self:LoadImpl(self.last, 1)
 
-	self.tail = self.last == #self.buffer
-
-	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, tail = self.tail, last = self.last, count = #self.buffer }, function()
+	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, last = self.last, count = #self.buffer }, function()
 		LogSinkTable:LogVerbose("Loaded next chunk")
 	end)
 
@@ -66,7 +62,7 @@ function Reader:LoadNext()
 end
 
 --- @return boolean
-function Reader:HasNewLogs()
+function Reader:HasNextLogs()
 	return self.last < #self.buffer
 end
 
@@ -86,6 +82,12 @@ function Reader:SetBuffer(buffer)
 
 	if self.onBufferSet ~= nil then
 		self.onBufferSet()
+	end
+end
+
+function Reader:OnMessageAdded()
+	if self.onMessageAdded ~= nil then
+		self.onMessageAdded()
 	end
 end
 

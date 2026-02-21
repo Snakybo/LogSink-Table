@@ -84,9 +84,8 @@ function Window:Open()
 	end
 
 	self.bufferReader = LogSinkTable:CreateChunkedBufferReader()
-	self.bufferReader.onBufferSet = function()
-		self:UpdateQueryString(LogSinkTableDB.currentFilter)
-	end
+	self.bufferReader.onBufferSet = function() self:BufferReader_OnBufferSet() end
+	self.bufferReader.onMessageAdded = function() self:BufferReader_OnMessageAdded() end
 
 	self:UpdateQueryString(LogSinkTableDB.currentFilter)
 	self.frame:Show()
@@ -165,50 +164,18 @@ function Window:CreateWindow()
 	self.filter = Addon.FilterFrame.Create(self.container)
 	self.filter:SetPoint("TOPLEFT", self.container, "TOPLEFT")
 	self.filter:SetPoint("BOTTOMRIGHT", self.container, "TOPRIGHT", 0, -20)
-	self.filter.onQueryStringChanged = function(text)
-		self:UpdateQueryString(text)
-	end
+	self.filter.onQueryStringChanged = function(...) self:Filter_OnQueryStringChanged(...) end
 
 	self.status = Addon.StatusFrame.Create(self.container)
 	self.status:SetPoint("TOPLEFT", self.container, "BOTTOMLEFT", 0, 20)
 	self.status:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT")
-	self.status.onSearchButtonClick = function()
-		self:LoadTableChunk(-1)
-
-		if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
-			self.status:ShowSearchButton(true)
-		else
-			self.status:ShowSearchButton(false)
-		end
-	end
-	self.status.onLiveButtonClick = function()
-		self:LoadTable()
-
-		if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
-			self.status:ShowSearchButton(true)
-		else
-			self.status:ShowSearchButton(false)
-		end
-	end
+	self.status.onSearchButtonClick = function() self:Status_OnSearchButtonClick() end
+	self.status.onLiveButtonClick = function() self:Status_OnLiveButtonClick() end
 
 	self.table = Addon.TableFrame.Create(self.container)
 	self.table:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
 	self.table:SetPoint("BOTTOMRIGHT", self.status, "TOPRIGHT")
-	self.table.onScroll = function(position, direction)
-		if not self.initialized then
-			return
-		end
-
-		if position < 1 and self.table.scrollBar:HasScrollableExtent() then
-			self.bufferReader.tail = false
-			self.status:ShowLiveButton(true)
-		elseif position >= 1 and not self.bufferReader:HasNewLogs() then
-			self.bufferReader.tail = true
-			self.status:ShowLiveButton(false)
-		end
-
-		self.scrollDirection = direction
-	end
+	self.table.onScroll = function(...) self:Table_OnScroll(...) end
 	self.table.columns = self.columns
 end
 
@@ -290,75 +257,90 @@ function Window:CreateContentContainer()
 	self.container:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
 end
 
+function Window:UpdateSearchButtonVisibility()
+	local visible = not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs()
+	self.status:ShowSearchButton(visible)
+end
+
+function Window:UpdateTailButtonVisibility()
+	self.status:ShowLiveButton(not self.tail)
+end
+
 --- @private
-function Window:LoadTable()
-	self.initialized = false
+function Window:InitializeTable()
+	if self.isMidUpdate then
+		return
+	end
+
+	self.isMidUpdate = true
 	self.table.dataProvider:Flush()
 
 	if not self.hasFilterError then
 		local chunk, scanned, elapsedMs = self.bufferReader:Load()
 		self.status:SetTemporaryText(Addon.L["Processed %d entries and found %d matches in %.2fms"]:format(scanned, #chunk, elapsedMs))
-		self.status:SetText("")
-
 		self.lastScrollTime = GetTime()
-
+		self.tail = true
 		self.table.dataProvider:InsertTable(chunk)
 
-		if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
-			self.status:ShowSearchButton(true)
-		else
-			self.status:ShowSearchButton(false)
-		end
-
-		self.status:ShowLiveButton(false)
+		self:UpdateSearchButtonVisibility()
+		self:UpdateTailButtonVisibility()
 	end
 
-	self.initialized = true
-	self.scrollDirection = 0
-
 	self.table.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
+	self.isMidUpdate = false
 end
 
 --- @private
 --- @param direction integer
 function Window:LoadTableChunk(direction)
-	if self.hasFilterError then
+	if self.isMidUpdate then
 		return
 	end
 
-	local chunk, scanned, elapsedMs
+	self.isMidUpdate = true
 
-	if direction > 0 then
-		chunk, scanned, elapsedMs = self.bufferReader:LoadNext()
-		local index = self.table.dataProvider:GetSize()
+	if not self.hasFilterError then
+		local chunk, scanned, elapsedMs
+		local wasTailing = self.tail
 
-		if #chunk > 0 then
-			self.table.dataProvider:InsertTable(chunk)
-			self.table.scrollBox:ScrollToElementDataIndex(index, ScrollBoxConstants.AlignEnd, 0, ScrollBoxConstants.NoScrollInterpolation)
+		if direction > 0 then
+			chunk, scanned, elapsedMs = self.bufferReader:LoadNext()
+			local index = self.table.dataProvider:GetSize()
+
+			self.tail = not self.bufferReader:HasNextLogs()
+			self:UpdateTailButtonVisibility()
+
+			if #chunk > 0 then
+				self.table.dataProvider:InsertTable(chunk)
+
+				if self.tail then
+					self.table.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
+				else
+					self.table.scrollBox:ScrollToElementDataIndex(index, ScrollBoxConstants.AlignEnd, 0, ScrollBoxConstants.NoScrollInterpolation)
+				end
+			end
+
+		else
+			chunk, scanned, elapsedMs = self.bufferReader:LoadPrevious()
+
+			if #chunk > 0 then
+				self.table.dataProvider:InsertTable(chunk)
+				self.table.scrollBox:ScrollToElementDataIndex(#chunk, ScrollBoxConstants.AlignBegin, 0, ScrollBoxConstants.NoScrollInterpolation)
+			end
 		end
-	else
-		chunk, scanned, elapsedMs = self.bufferReader:LoadPrevious()
 
-		if #chunk > 0 then
-			self.table.dataProvider:InsertTable(chunk)
-			self.table.scrollBox:ScrollToElementDataIndex(#chunk, ScrollBoxConstants.AlignBegin, 0, ScrollBoxConstants.NoScrollInterpolation)
-		end
-	end
-
-	if chunk ~= nil and scanned ~= nil and elapsedMs ~= nil then
-		if scanned > 0 then
+		if not wasTailing and (chunk ~= nil and scanned ~= nil and elapsedMs ~= nil) then
 			self.status:SetTemporaryText(Addon.L["Processed %d entries and found %d matches in %.2fms"]:format(scanned, #chunk, elapsedMs))
-		elseif not self.bufferReader:HasPreviousLogs() then
-			self.status:SetTemporaryText(Addon.L["No new entries"])
 		end
 	end
+
+	self.isMidUpdate = false
 end
 
 --- @private
 --- @param text? string
 function Window:UpdateQueryString(text)
 	self.hasFilterError = false
-	self.initialized = false
 
 	if text ~= nil then
 		local filter = LogSinkTable:CreateFilterFromString(text)
@@ -368,36 +350,44 @@ function Window:UpdateQueryString(text)
 			self.status:SetText("|cffff0000" .. Addon.L["Filter error: %s"]:format(filter))
 		else
 			self.bufferReader:SetFilter(filter)
+			self.status:SetText("")
 		end
 	else
 		self.bufferReader:SetFilter(nil)
+		self.status:SetText("")
 	end
 
-	self:LoadTable()
+	self:InitializeTable()
+end
+
+--- @private
+function Window:BufferReader_OnBufferSet()
+	self:UpdateQueryString(LogSinkTableDB.currentFilter)
+end
+
+--- @private
+function Window:BufferReader_OnMessageAdded()
+	if self.tail then
+		self.hasMessagesPending = true
+	end
 end
 
 --- @private
 function Window:Frame_OnUpdate()
-	local now = GetTime()
-
-	if not self.initialized or self.hasFilterError then
-		return
+	if self.hasMessagesPending then
+		self:LoadTableChunk(1)
+		self.hasMessagesPending = false
 	end
 
-	if self.bufferReader.tail and self.bufferReader:HasNewLogs() then
-		local chunk = self.bufferReader:LoadNext()
+	if self.wantsScroll ~= 0 then
+		local now = GetTime()
 
-		if #chunk > 0 then
-			self.table.dataProvider:InsertTable(chunk)
-			self.table.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
+		if now >= (self.lastScrollTime or 0) + SCROLL_THROTTLE then
+			self:LoadTableChunk(self.wantsScroll)
+			self.lastScrollTime = now
 		end
-	end
 
-	if not self.bufferReader.tail and self.scrollDirection ~= 0 and now >= (self.lastScrollTime or 0) + SCROLL_THROTTLE then
-		self:LoadTableChunk(self.scrollDirection)
-
-		self.scrollDirection = 0
-		self.lastScrollTime = now
+		self.wantsScroll = 0
 	end
 end
 
@@ -410,6 +400,50 @@ function Window:Frame_CloseButton_OnClick()
 
 	self.table.dataProvider:Flush()
 	self.frame:Hide()
+end
+
+--- @private
+--- @param text string
+function Window:Filter_OnQueryStringChanged(text)
+	self:UpdateQueryString(text)
+end
+
+--- @private
+function Window:Status_OnSearchButtonClick()
+	self:LoadTableChunk(-1)
+
+	if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
+		self.status:ShowSearchButton(true)
+	else
+		self.status:ShowSearchButton(false)
+	end
+end
+
+--- @private
+function Window:Status_OnLiveButtonClick()
+	self:InitializeTable()
+
+	if not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() then
+		self.status:ShowSearchButton(true)
+	else
+		self.status:ShowSearchButton(false)
+	end
+end
+
+--- @private
+--- @param position number
+--- @param direction integer
+function Window:Table_OnScroll(position, direction)
+	if self.isMidUpdate then
+		return
+	end
+
+	if position < 1 and self.table.scrollBar:HasScrollableExtent() then
+		self.tail = false
+		self:UpdateTailButtonVisibility()
+	end
+
+	self.wantsScroll = direction
 end
 
 Addon.Window = Window

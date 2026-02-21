@@ -2,11 +2,12 @@
 local Addon = select(2, ...)
 
 --- @class BufferReader
+--- @field public OnMessageAdded? fun(self: BufferReader, message: LibLog-1.0.LogMessage)
 --- @field public SetBuffer fun(self: BufferReader, buffer: LibLog-1.0.LogMessage[])
 
 --- @class Buffer
 --- @field private all LibLog-1.0.LogMessage[]
---- @field private readers ChunkedBufferReader[]
+--- @field private readers BufferReader[]
 --- @field private mock boolean
 local Buffer = {
 	all = {},
@@ -21,6 +22,12 @@ function Buffer:Add(message)
 	end
 
 	table.insert(self.all, message)
+
+	for i = 1, #self.readers do
+		if self.readers[i].OnMessageAdded ~= nil then
+			self.readers[i]:OnMessageAdded(message)
+		end
+	end
 end
 
 --- @param buffer LibLog-1.0.LogMessage[]
