@@ -31,5 +31,6 @@ ChunkedBufferReader.lua
 Window.lua
 Templates.xml
 UI\FilterFrame.lua
+UI\HeaderFrame.lua
 UI\StatusFrame.lua
 UI\TableFrame.lua

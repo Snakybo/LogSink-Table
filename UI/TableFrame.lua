@@ -13,22 +13,42 @@ local Addon = select(2, ...)
 
 --- @class TableFrame : Frame
 --- @field public onScroll? fun(position: number, direction: integer)
---- @field public columns ColumnConfig[]
 --- @field public dataProvider DataProviderMixin
 --- @field public scrollBar MinimalScrollBar
 --- @field public scrollBox WowScrollBoxList
+--- @field private columns ColumnConfig[]
 local TableFrame = {}
 
 local ROW_HEIGHT = 22
 local DEFAULT_COLUMN_WIDTH = 100
 
-function TableFrame.Create(parent)
+--- @param parent Frame
+--- @param columns ColumnConfig[]
+--- @return TableFrame
+function TableFrame.Create(parent, columns)
 	local base = CreateFrame("Frame", nil, parent)
 
 	local result = Mixin(base, TableFrame)
+	result.columns = columns
 	result:Init()
 
 	return result
+end
+
+function TableFrame:UpdateColumns()
+	self.scrollBox:Rebuild(true)
+end
+
+--- @param column integer
+function TableFrame:ResizeColumn(column)
+	self.scrollBox:ForEachFrame(function(frame)
+		local config = self.columns[column]
+		local cell = frame.cells[column]
+
+		if cell ~= nil then
+			cell:SetWidth(config.width or DEFAULT_COLUMN_WIDTH)
+		end
+	end)
 end
 
 --- @private
@@ -45,13 +65,13 @@ function TableFrame:Init()
 	local view = CreateScrollBoxListLinearView()
 	view:SetElementExtent(ROW_HEIGHT)
 	view:SetElementFactory(function(factory, node)
-		if node.isHeader then
+		if node.sequenceId == nil and node.isHeader then
 			factory("LogTableRowHeaderTemplate", function(frame)
-				self:CreateHeaderRow(frame)
+				self:SetupHeaderRow(frame)
 			end)
 		else
 			factory("LogTableRowTemplate", function(frame, element)
-				self:CreateScrollBoxRow(frame, element)
+				self:SetupRow(frame, element)
 			end)
 		end
 	end)
@@ -76,7 +96,7 @@ end
 
 --- @private
 --- @param frame TableRowHeaderFrame
-function TableFrame:CreateHeaderRow(frame)
+function TableFrame:SetupHeaderRow(frame)
 	frame.Text:SetText(Addon.L["Click to search further back..."])
 
 	frame:SetScript("OnClick", function() self:HeaderRow_OnClick() end)
@@ -85,10 +105,10 @@ end
 --- @private
 --- @param frame TableRowFrame
 --- @param entry LibLog-1.0.LogMessage
-function TableFrame:CreateScrollBoxRow(frame, entry)
+function TableFrame:SetupRow(frame, entry)
 	local cells = frame.cells
 
-	for i, colConfig in ipairs(self.columns) do
+	for i, config in ipairs(self.columns) do
 		if not cells[i] then
 			cells[i] = CreateFrame("Frame", nil, frame, "LogTableCellTemplate")
 		end
@@ -103,12 +123,13 @@ function TableFrame:CreateScrollBoxRow(frame, entry)
 		end
 
 		if i < #self.columns then
-			cell:SetWidth(colConfig.width or DEFAULT_COLUMN_WIDTH)
+			cell:ClearPoint("RIGHT")
+			cell:SetWidth(config.width or DEFAULT_COLUMN_WIDTH)
 		else
 			cell:SetPoint("RIGHT", frame:GetParent(), "RIGHT")
 		end
 
-		local value = colConfig.get and colConfig.get(entry) or entry[colConfig.key]
+		local value = config.get ~= nil and config.get(entry) or entry[config.key] or entry.properties[config.key]
 		cell.Text:SetText(tostring(value or ""))
 	end
 

@@ -39,7 +39,7 @@ local DEFAULTS = {
 		get = function(entry)
 			return date("%H:%M:%S", entry.time)
 		end,
-		width = 75
+		width = 60
 	},
 	{
 		name = Addon.L["Level"],
@@ -61,7 +61,6 @@ local DEFAULTS = {
 	}
 }
 
-local COLUMN_MIN_WIDTH = 50
 local SCROLL_THROTTLE = 0.3
 
 --- @type ColumnConfig[]
@@ -89,9 +88,16 @@ function Window:IsOpen()
 end
 
 --- @param key string
-function Window:AddColumn(key)
+--- @param after? integer
+function Window:AddColumn(key, after)
 	if self:HasColumn(key) then
 		return
+	end
+
+	if after ~= nil then
+		after = after + 1
+	else
+		after = #self.columns
 	end
 
 	--- @type ColumnConfig
@@ -109,7 +115,10 @@ function Window:AddColumn(key)
 		custom = true
 	}
 
-	table.insert(self.columns, column)
+	table.insert(self.columns, after, column)
+
+	self.header:UpdateColumns()
+	self.table:UpdateColumns()
 end
 
 --- @param key string
@@ -118,6 +127,9 @@ function Window:RemoveColumn(key)
 
 	if contains then
 		table.remove(self.columns, position)
+
+		self.header:UpdateColumns()
+		self.table:UpdateColumns()
 	end
 end
 
@@ -129,6 +141,9 @@ function Window:ReorderColumn(key, position)
 	if contains then
 		local column = table.remove(self.columns, originalPosition)
 		table.insert(self.columns, position, column)
+
+		self.header:UpdateColumns()
+		self.table:UpdateColumns()
 	end
 end
 
@@ -146,7 +161,14 @@ function Window:HasColumn(key)
 end
 
 function Window:ResetColumns()
-	self.columns = CopyTable(DEFAULTS)
+	wipe(self.columns)
+
+	for _, v in ipairs(DEFAULTS) do
+		table.insert(self.columns, v)
+	end
+
+	self.header:UpdateColumns()
+	self.table:UpdateColumns()
 end
 
 --- @private
@@ -159,16 +181,21 @@ function Window:CreateWindow()
 	self.filter:SetPoint("BOTTOMRIGHT", self.container, "TOPRIGHT", 0, -20)
 	self.filter.onQueryStringChanged = function(...) self:Filter_OnQueryStringChanged(...) end
 
+	self.header = Addon.HeaderFrame.Create(self.container, self.columns)
+	self.header:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
+	self.header:SetPoint("TOPRIGHT", self.filter, "BOTTOMRIGHT", 0, -10)
+	self.header:SetHeight(24)
+	self.header.onColumnResized = function(...) self:Header_OnColumnsResized(...) end
+
 	self.status = Addon.StatusFrame.Create(self.container)
 	self.status:SetPoint("TOPLEFT", self.container, "BOTTOMLEFT", 0, 20)
 	self.status:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT")
 	self.status.onLiveButtonClick = function() self:Status_OnLiveButtonClick() end
 
-	self.table = Addon.TableFrame.Create(self.container)
-	self.table:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
+	self.table = Addon.TableFrame.Create(self.container, self.columns)
+	self.table:SetPoint("TOPLEFT", self.header, "BOTTOMLEFT", 0, 0)
 	self.table:SetPoint("BOTTOMRIGHT", self.status, "TOPRIGHT")
 	self.table.onScroll = function(...) self:Table_OnScroll(...) end
-	self.table.columns = self.columns
 end
 
 --- @private
@@ -423,6 +450,12 @@ end
 --- @param text string
 function Window:Filter_OnQueryStringChanged(text)
 	self:UpdateQueryString(text)
+end
+
+--- @private
+--- @param column integer
+function Window:Header_OnColumnsResized(column)
+	self.table:ResizeColumn(column)
 end
 
 --- @private

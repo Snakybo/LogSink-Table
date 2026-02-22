@@ -1,34 +1,35 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\FrameXML\UI.xsd">
-    <Frame name="LogTableCellTemplate" virtual="true">
-        <Size x="100" y="22"/>
-        <Layers>
-            <Layer level="ARTWORK">
-                <FontString parentKey="Text" inherits="ChatFontNormal" justifyH="LEFT" maxLines="1">
-                    <Anchors>
-                        <Anchor point="LEFT" x="4" y="0"/>
-                        <Anchor point="RIGHT" x="-4" y="0"/>
-                    </Anchors>
-                </FontString>
-            </Layer>
-        </Layers>
-    </Frame>
+	<Frame name="LogTableCellTemplate" virtual="true">
+		<Size x="100" y="22"/>
+		<Layers>
+			<Layer level="ARTWORK">
+				<FontString parentKey="Text" inherits="ChatFontNormal" justifyH="LEFT" maxLines="1">
+					<Anchors>
+						<Anchor point="TOPLEFT" x="4" y="0"/>
+						<Anchor point="BOTTOMRIGHT" x="-4" y="0"/>
+					</Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+	</Frame>
 
-    <Button name="LogTableRowTemplate" virtual="true">
-        <Size x="1" y="22"/> <Layers>
-            <Layer level="OVERLAY">
-                <Texture parentKey="Highlight" setAllPoints="true" hidden="true" alphaMode="ADD">
-                    <Color r="1" g="1" b="1" a="0.1"/>
-                </Texture>
-            </Layer>
-        </Layers>
+	<Button name="LogTableRowTemplate" virtual="true">
+		<Size x="1" y="22"/>
+		<Layers>
+			<Layer level="OVERLAY">
+				<Texture parentKey="Highlight" setAllPoints="true" hidden="true" alphaMode="ADD">
+					<Color r="1" g="1" b="1" a="0.1"/>
+				</Texture>
+			</Layer>
+		</Layers>
 
-        <Scripts>
-            <OnLoad>
-                self.cells = {}
-            </OnLoad>
-        </Scripts>
-    </Button>
+		<Scripts>
+			<OnLoad>
+				self.cells = {}
+			</OnLoad>
+		</Scripts>
+	</Button>
 
 	<Button name="LogTableRowHeaderTemplate" virtual="true">
 		<Size x="1" y="22"/>
