@@ -62,6 +62,17 @@ function FilterFrame.Create(parent)
 	return result
 end
 
+--- @param text string
+function FilterFrame:SetText(text)
+	self.editBox:SetText(text)
+	self:EditBox_OnEnterPressed()
+end
+
+--- @return string
+function FilterFrame:GetText()
+	return self.editBox:GetText()
+end
+
 --- @private
 function FilterFrame:Init()
 	self.editBox = CreateFrame("EditBox", nil, self, "SearchBoxTemplate") --[[@as SearchBoxTemplate]]

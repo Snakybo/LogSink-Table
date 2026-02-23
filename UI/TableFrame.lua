@@ -179,7 +179,11 @@ function TableFrame:SetupRow(frame, entry)
 			cell:SetScript("OnMouseUp", function(...) self:LogCell_OnMouseUp(...) end)
 			cell:SetScript("OnEnter", function() self:LogRow_OnEnter(frame) end)
 			cell:SetScript("OnLeave", function() self:LogRow_OnLeave(frame)  end)
-			cell:SetScript("OnClick", function() self:LogRow_OnClick(entry) end)
+			cell:SetScript("OnClick", function(_, button)
+				if button == "LeftButton" then
+					self:LogRow_OnClick(entry)
+				end
+			end)
 
 			cells[i] = cell
 		end
@@ -256,30 +260,42 @@ function TableFrame:LogCell_OnMouseUp(frame, button)
 	end
 
 	MenuUtil.CreateContextMenu(frame, function(owner, root)
-		root:CreateButton(Addon.L["Copy value"], function()
+		local value = GetRawValue(frame.config, frame.data)
+
+		local copyValue = root:CreateButton(Addon.L["Copy value"], function()
 			StaticPopup_Show("LOGSINK_COPY_TEXT", nil, nil, frame.Text:GetText())
 		end)
+		copyValue:SetEnabled(type(value) ~= "nil")
 
 		root:CreateButton(Addon.L["Copy data"], function()
 			StaticPopup_Show("LOGSINK_COPY_TEXT",  nil, nil, SerializeTable(frame.data))
 		end)
 
-		-- root:CreateButton(Addon.L["Add filter"], function()
-		-- 	local value = GetRawValue(frame.config, frame.data)
-		-- 	local filter = frame.config.key .. " = "
+		local addFilter = root:CreateButton(Addon.L["Add filter"], function()
+			local filter = frame.config.key .. " = "
 
-		-- 	if type(value) == "string" then
-		-- 		filter = filter .. '"' .. value .. '"'
-		-- 	else
-		-- 		filter = filter .. value
-		-- 	end
+			if type(value) == "string" then
+				filter = filter .. '"' .. value .. '"'
+			else
+				filter = filter .. value
+			end
 
-		-- 	print(filter)
-		-- end)
+			Addon.Window:AppendQueryString(filter)
+		end)
+		addFilter:SetEnabled(type(value) ~= "nil" and type(value) ~= "table")
 
-		-- root:CreateButton(Addon.L["Exclude value"], function()
+		local addExclude = root:CreateButton(Addon.L["Exclude value"], function()
+			local filter = frame.config.key .. " ~= "
 
-		-- end)
+			if type(value) == "string" then
+				filter = filter .. '"' .. value .. '"'
+			else
+				filter = filter .. value
+			end
+
+			Addon.Window:AppendQueryString(filter)
+		end)
+		addExclude:SetEnabled(type(value) ~= "nil" and type(value) ~= "table")
 	end)
 end
 

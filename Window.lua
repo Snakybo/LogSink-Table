@@ -175,6 +175,25 @@ function Window:ResetColumns()
 	self.table:UpdateColumns()
 end
 
+--- @param text string
+function Window:AppendQueryString(text)
+	local fullText = self.filter:GetText()
+	local tokens = Addon.QueryParser:Tokenize(fullText)
+
+	for _, token in ipairs(tokens) do
+		if token.type == Addon.TokenType.Property then
+			text = "AND " .. text
+			break
+		end
+	end
+
+	if #tokens > 0 and tokens[#tokens].type ~= Addon.TokenType.Whitespace then
+		text = " " .. text
+	end
+
+	self.filter:SetText(fullText .. text)
+end
+
 --- @private
 function Window:CreateWindow()
 	self:CreateFrame()
