@@ -16,11 +16,12 @@
 --- @field public text string
 
 --- @class ColumnConfig
---- @field public name string
 --- @field public key string
---- @field public get? fun(entry: LibLog-1.0.LogMessage): unknown
---- @field public custom? boolean
 --- @field public width? integer
+
+--- @class ColumnVisualizer
+--- @field public name string
+--- @field public get? fun(entry: LibLog-1.0.LogMessage): unknown
 
 local LibLog = LibStub("LibLog-1.0")
 
@@ -33,41 +34,52 @@ local Window = {}
 Window.DEFAULT_COLUMN_WIDTH = 100
 
 --- @type ColumnConfig[]
-local DEFAULTS = {
+local COLUMN_DEFAULTS = {
 	{
-		name = Addon.L["Time"],
 		key = "time",
-		--- @param entry LibLog-1.0.LogMessage
-		get = function(entry)
-			return date("%H:%M:%S", entry.time)
-		end,
 		width = 60
 	},
 	{
-		name = Addon.L["Level"],
 		key = "level",
-		--- @param entry LibLog-1.0.LogMessage
-		get = function(entry)
-			return LibLog.labels[entry.level]
-		end,
 		width = 50
 	},
 	{
-		name = Addon.L["Addon"],
 		key = "addon",
 		width = 125
 	},
 	{
-		name = Addon.L["Message"],
 		key = "message",
 		width = 200
+	}
+}
+
+local COLUMN_VISUALIZERS = {
+	["time"] = {
+		name = Addon.L["Time"],
+		--- @param entry LibLog-1.0.LogMessage
+		get = function(entry)
+			return date("%H:%M:%S", entry.time)
+		end
+	},
+	["level"] = {
+		name = Addon.L["Level"],
+		--- @param entry LibLog-1.0.LogMessage
+		get = function(entry)
+			return LibLog.labels[entry.level]
+		end
+	},
+	["addon"] = {
+		name = Addon.L["Addon"]
+	},
+	["message"] = {
+		name = Addon.L["Message"]
 	}
 }
 
 local SCROLL_THROTTLE = 0.3
 
 --- @type ColumnConfig[]
-Window.columns = CopyTable(DEFAULTS)
+Window.columns = CopyTable(COLUMN_DEFAULTS)
 
 function Window:Open()
 	if self:IsOpen() then
@@ -106,7 +118,7 @@ function Window:AddColumn(key, after)
 	--- @type ColumnConfig
 	local column
 
-	for _, v in ipairs(DEFAULTS) do
+	for _, v in ipairs(COLUMN_DEFAULTS) do
 		if key == v.key then
 			column = CopyTable(v)
 		end
@@ -115,8 +127,7 @@ function Window:AddColumn(key, after)
 	column = column or {
 		name = key,
 		key = key,
-		width = Window.DEFAULT_COLUMN_WIDTH,
-		custom = true
+		width = Window.DEFAULT_COLUMN_WIDTH
 	}
 
 	table.insert(self.columns, after, column)
@@ -167,7 +178,7 @@ end
 function Window:ResetColumns()
 	wipe(self.columns)
 
-	for _, v in ipairs(DEFAULTS) do
+	for _, v in ipairs(COLUMN_DEFAULTS) do
 		table.insert(self.columns, v)
 	end
 
@@ -194,8 +205,18 @@ function Window:AppendQueryString(text)
 	self.filter:SetText(fullText .. text)
 end
 
+--- @param key string
+--- @return ColumnVisualizer?
+function Window:GetColumnVisualizer(key)
+	return COLUMN_VISUALIZERS[key]
+end
+
 --- @private
 function Window:CreateWindow()
+	if LogSinkTableDB.columns ~= nil then
+		self.columns = LogSinkTableDB.columns
+	end
+
 	self:CreateFrame()
 	self:CreateContentContainer()
 
@@ -299,6 +320,7 @@ function Window:CreateContentContainer()
 	self.container:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
 end
 
+--- @private
 function Window:UpdateSearchButtonVisibility()
 	local visible = not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() and not self.hasFilterError
 
@@ -315,6 +337,7 @@ function Window:UpdateSearchButtonVisibility()
 	self.searchButtonVisible = visible
 end
 
+--- @private
 function Window:UpdateTailButtonVisibility()
 	self.status:ShowLiveButton(not self.tail and not self.hasFilterError)
 end

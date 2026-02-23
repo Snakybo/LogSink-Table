@@ -80,8 +80,10 @@ end
 --- @param entry LibLog-1.0.LogMessage
 --- @return unknown
 local function GetValue(config, entry)
-	if config.get ~= nil then
-		return config.get(entry)
+	local visualizer = Addon.Window:GetColumnVisualizer(config.key)
+
+	if visualizer ~= nil and visualizer.get ~= nil then
+		return visualizer.get(entry)
 	end
 
 	return GetRawValue(config, entry)

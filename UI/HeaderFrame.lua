@@ -82,6 +82,7 @@ function HeaderFrame:UpdateColumns()
 	for i = 1, #self.columns do
 		local config = self.columns[i]
 		local button = self.buttons[i]
+		local visualizer = Addon.Window:GetColumnVisualizer(config.key)
 
 		if button == nil then
 			--- @type HeaderButtonFrame
@@ -114,7 +115,7 @@ function HeaderFrame:UpdateColumns()
 
 		button.column = i
 		button.config = config
-		button.text:SetText(config.name or config.key)
+		button.text:SetText(visualizer ~= nil and visualizer.name or config.key)
 		button.resizer:Show()
 
 		if i == 1 then
