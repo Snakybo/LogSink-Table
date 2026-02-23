@@ -186,7 +186,7 @@ function Table:SetupRow(frame, entry)
 			cell:SetScript("OnLeave", function() self:LogRow_OnLeave(frame)  end)
 			cell:SetScript("OnClick", function(_, button)
 				if button == "LeftButton" then
-					self:LogRow_OnClick(entry)
+					self:LogRow_OnClick(cell.data)
 				end
 			end)
 
