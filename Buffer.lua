@@ -94,6 +94,7 @@ function Buffer:GenerateMockData(count)
 			--- @type LibLog-1.0.LogMessage
 			local entry = {
 				message = "",
+				template = "",
 				addon = Randomize(addons),
 				level = math.random(1, 6),
 				time = time() - (count - remaining),
@@ -104,11 +105,13 @@ function Buffer:GenerateMockData(count)
 			if math.random() > 0.5 then
 				entry.properties.charName = Randomize(charNames)
 				entry.message = entry.message .. "My name is " .. entry.properties.charName .. " "
+				entry.template = entry.template .. "My name is {charName} "
 			end
 
 			if math.random() > 0.5 then
 				entry.properties.realmName = Randomize(realms)
 				entry.message = entry.message .. "My realm is " .. entry.properties.realmName .. " "
+				entry.template = entry.template .. "My realm is {realmName} "
 			end
 
 			if math.random() > 0.5 then

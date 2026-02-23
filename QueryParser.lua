@@ -486,6 +486,7 @@ function QueryParser:TestSuite()
 	--- @type LibLog-1.0.LogMessage
 	local entry = {
 		message = "My character name is Arthas on realm Frostmourne",
+		template = "My character name is {charName} on realm {realmName}",
 		addon = "MyAddon",
 		level = LibLog.LogLevel.INFO,
 		time = time() - (15 * 60),
