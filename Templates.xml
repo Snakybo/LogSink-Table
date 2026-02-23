@@ -1,6 +1,6 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\FrameXML\UI.xsd">
-	<Frame name="LogTableCellTemplate" virtual="true">
+	<Button name="LogTableCellTemplate" virtual="true">
 		<Size x="100" y="22"/>
 		<Layers>
 			<Layer level="ARTWORK">
@@ -12,7 +12,7 @@
 				</FontString>
 			</Layer>
 		</Layers>
-	</Frame>
+	</Button>
 
 	<Button name="LogTableRowTemplate" virtual="true">
 		<Size x="1" y="22"/>

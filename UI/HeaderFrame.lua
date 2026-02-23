@@ -18,7 +18,6 @@ local Addon = select(2, ...)
 --- @field private buttons HeaderButtonFrame[]
 local HeaderFrame = {}
 
-local DEFAULT_COLUMN_WIDTH = 100
 local MIN_COLUMN_WIDTH = 50
 
 StaticPopupDialogs["LOGSINK_ADD_COLUMN"] = {
@@ -109,7 +108,7 @@ function HeaderFrame:UpdateColumns()
 			self.buttons[i] = button
 		end
 
-		button:SetWidth(config.width or DEFAULT_COLUMN_WIDTH)
+		button:SetWidth(config.width or Addon.Window.DEFAULT_COLUMN_WIDTH)
 		button:ClearAllPoints()
 		button:Show()
 
@@ -221,7 +220,7 @@ function HeaderFrame:CreateResizer(button)
 			lastWidth = width
 
 			button.config.width = width
-			button:SetWidth(width or DEFAULT_COLUMN_WIDTH)
+			button:SetWidth(width or Addon.Window.DEFAULT_COLUMN_WIDTH)
 
 			if self.onColumnResized ~= nil then
 				self.onColumnResized(button.column)

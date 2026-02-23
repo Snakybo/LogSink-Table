@@ -30,6 +30,8 @@ local Addon = select(2, ...)
 --- @class Window
 local Window = {}
 
+Window.DEFAULT_COLUMN_WIDTH = 100
+
 --- @type ColumnConfig[]
 local DEFAULTS = {
 	{
@@ -57,7 +59,8 @@ local DEFAULTS = {
 	},
 	{
 		name = Addon.L["Message"],
-		key = "message"
+		key = "message",
+		width = 200
 	}
 }
 
@@ -112,6 +115,7 @@ function Window:AddColumn(key, after)
 	column = column or {
 		name = key,
 		key = key,
+		width = Window.DEFAULT_COLUMN_WIDTH,
 		custom = true
 	}
 

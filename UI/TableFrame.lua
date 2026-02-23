@@ -1,8 +1,10 @@
 --- @class Addon
 local Addon = select(2, ...)
 
---- @class TableCellFrame : Frame
+--- @class TableCellFrame : Button
 --- @field public Text FontString
+--- @field public data LibLog-1.0.LogMessage
+--- @field public config ColumnConfig
 
 --- @class TableRowFrame : Frame
 --- @field public cells TableCellFrame[]
@@ -20,7 +22,67 @@ local Addon = select(2, ...)
 local TableFrame = {}
 
 local ROW_HEIGHT = 22
-local DEFAULT_COLUMN_WIDTH = 100
+
+StaticPopupDialogs["LOGSINK_COPY_TEXT"] = {
+    text = Addon.L["Press Ctrl+C to copy"],
+    button1 = DONE,
+    hasEditBox = true,
+	editBoxWidth = 260,
+	OnShow = function(self, data)
+		self.EditBox:SetText(data)
+		self.EditBox:SetCursorPosition(0)
+		self.EditBox:HighlightText()
+	end,
+	EditBoxOnEscapePressed = StaticPopup_StandardEditBoxOnEscapePressed,
+    timeout = 0,
+    whileDead = true
+}
+
+local function SerializeTable(tbl, indent)
+	indent = indent or ""
+
+	local nextIndent = indent .. "\t"
+	local lines = {
+		"{"
+	}
+
+	for k, v in pairs(tbl) do
+		local key = type(k) == "string" and k or "[" .. tostring(k) .. "]"
+		local value
+
+		if type(v) == "table" then
+			value = SerializeTable(v, nextIndent)
+		elseif type(v) == "string" then
+			value = string.format("%q", v)
+		else
+			value = tostring(v)
+		end
+
+		table.insert(lines, string.format("%s%s = %s,", nextIndent, key, value))
+	end
+
+	table.insert(lines, indent .. "}")
+
+	return table.concat(lines, "\n")
+end
+
+--- @param config ColumnConfig
+--- @param entry LibLog-1.0.LogMessage
+--- @return unknown
+local function GetRawValue(config, entry)
+	return entry[config.key] or entry.properties[config.key]
+end
+
+--- @param config ColumnConfig
+--- @param entry LibLog-1.0.LogMessage
+--- @return unknown
+local function GetValue(config, entry)
+	if config.get ~= nil then
+		return config.get(entry)
+	end
+
+	return GetRawValue(config, entry)
+end
 
 --- @param parent Frame
 --- @param columns ColumnConfig[]
@@ -46,7 +108,7 @@ function TableFrame:ResizeColumn(column)
 		local cell = frame.cells[column]
 
 		if cell ~= nil then
-			cell:SetWidth(config.width or DEFAULT_COLUMN_WIDTH)
+			cell:SetWidth(config.width)
 		end
 	end)
 end
@@ -109,11 +171,21 @@ function TableFrame:SetupRow(frame, entry)
 	local cells = frame.cells
 
 	for i, config in ipairs(self.columns) do
-		if not cells[i] then
-			cells[i] = CreateFrame("Frame", nil, frame, "LogTableCellTemplate")
+		local cell = cells[i]
+
+		if cell == nil then
+			cell = CreateFrame("Button", nil, frame, "LogTableCellTemplate")
+			cell:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+			cell:SetScript("OnMouseUp", function(...) self:LogCell_OnMouseUp(...) end)
+			cell:SetScript("OnEnter", function() self:LogRow_OnEnter(frame) end)
+			cell:SetScript("OnLeave", function() self:LogRow_OnLeave(frame)  end)
+			cell:SetScript("OnClick", function() self:LogRow_OnClick(entry) end)
+
+			cells[i] = cell
 		end
 
-		local cell = cells[i]
+		cell.data = entry
+		cell.config = config
 		cell:Show()
 
 		if i == 1 then
@@ -124,13 +196,12 @@ function TableFrame:SetupRow(frame, entry)
 
 		if i < #self.columns then
 			cell:ClearPoint("RIGHT")
-			cell:SetWidth(config.width or DEFAULT_COLUMN_WIDTH)
+			cell:SetWidth(config.width)
 		else
 			cell:SetPoint("RIGHT", frame:GetParent(), "RIGHT")
 		end
 
-		local value = config.get ~= nil and config.get(entry) or entry[config.key] or entry.properties[config.key]
-		cell.Text:SetText(tostring(value or ""))
+		cell.Text:SetText(tostring(GetValue(config, entry) or ""))
 	end
 
 	for i = #self.columns + 1, #frame.cells do
@@ -169,10 +240,47 @@ function TableFrame:LogRow_OnLeave(frame)
 	frame.Highlight:Hide()
 end
 
+--- @private
 --- @param entry LibLog-1.0.LogMessage
 function TableFrame:LogRow_OnClick(entry)
 	UIParentLoadAddOn("Blizzard_DebugTools")
 	DisplayTableInspectorWindow(entry)
+end
+
+--- @private
+--- @param frame TableCellFrame
+--- @param button string
+function TableFrame:LogCell_OnMouseUp(frame, button)
+	if button ~= "RightButton" then
+		return
+	end
+
+	MenuUtil.CreateContextMenu(frame, function(owner, root)
+		root:CreateButton(Addon.L["Copy value"], function()
+			StaticPopup_Show("LOGSINK_COPY_TEXT", nil, nil, frame.Text:GetText())
+		end)
+
+		root:CreateButton(Addon.L["Copy data"], function()
+			StaticPopup_Show("LOGSINK_COPY_TEXT",  nil, nil, SerializeTable(frame.data))
+		end)
+
+		-- root:CreateButton(Addon.L["Add filter"], function()
+		-- 	local value = GetRawValue(frame.config, frame.data)
+		-- 	local filter = frame.config.key .. " = "
+
+		-- 	if type(value) == "string" then
+		-- 		filter = filter .. '"' .. value .. '"'
+		-- 	else
+		-- 		filter = filter .. value
+		-- 	end
+
+		-- 	print(filter)
+		-- end)
+
+		-- root:CreateButton(Addon.L["Exclude value"], function()
+
+		-- end)
+	end)
 end
 
 Addon.TableFrame = TableFrame
