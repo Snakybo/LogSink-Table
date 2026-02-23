@@ -95,9 +95,10 @@ function Header:UpdateColumns()
 			button.highlight:SetColorTexture(1, 1, 1, 0.1)
 			button.highlight:Hide()
 
-			button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+			button.text = button:CreateFontString(nil, "OVERLAY", "ChatFontNormal")
 			button.text:SetPoint("TOPLEFT", button, "TOPLEFT", 4, 0)
 			button.text:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 0)
+			button.text:SetTextColor(1, 0.82, 0, 1)
 			button.text:SetJustifyH("LEFT")
 
 			button:SetScript("OnEnter", function(...) self:HeaderButton_OnEnter(...) end)

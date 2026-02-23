@@ -304,7 +304,6 @@ function Table:LogCell_OnMouseUp(frame, button)
 	end)
 end
 
-
 --- @class TableFrame
 local TableFrame = Addon.TableFrame
 TableFrame.UI.Table = Table
