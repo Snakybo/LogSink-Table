@@ -1,7 +1,7 @@
 --- @class Addon
 local Addon = select(2, ...)
 
---- @class FilterFrame : Frame
+--- @class TableFrameUI.Filter : Frame
 --- @field public onQueryStringChanged? fun(query: string)
 --- @field private editBox SearchBoxTemplate
 --- @field private textContainer Frame
@@ -11,7 +11,7 @@ local Addon = select(2, ...)
 --- @field private cursorHideAnim Alpha
 --- @field private text FontString
 --- @field private measureText FontString
-local FilterFrame = {}
+local Filter = {}
 
 local COLOR_SCHEME = {
 	[Addon.TokenType.Keyword] = "ffD67113",
@@ -52,29 +52,29 @@ local function Colorize(tokens)
 end
 
 --- @param parent Frame
---- @return FilterFrame
-function FilterFrame.Create(parent)
+--- @return TableFrameUI.Filter
+function Filter.Create(parent)
 	local base = CreateFrame("Frame", nil, parent)
 
-	local result = Mixin(base, FilterFrame)
+	local result = Mixin(base, Filter)
 	result:Init()
 
 	return result
 end
 
 --- @param text string
-function FilterFrame:SetText(text)
+function Filter:SetText(text)
 	self.editBox:SetText(text)
 	self:EditBox_OnEnterPressed()
 end
 
 --- @return string
-function FilterFrame:GetText()
+function Filter:GetText()
 	return self.editBox:GetText()
 end
 
 --- @private
-function FilterFrame:Init()
+function Filter:Init()
 	self.editBox = CreateFrame("EditBox", nil, self, "SearchBoxTemplate") --[[@as SearchBoxTemplate]]
 	self.editBox:SetPoint("TOPLEFT", self, "TOPLEFT", 5, 0)
 	self.editBox:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT")
@@ -133,7 +133,7 @@ function FilterFrame:Init()
 end
 
 --- @private
-function FilterFrame:SyncEditBox()
+function Filter:SyncEditBox()
 	local text = self.editBox:GetText()
 	local tokens = Addon.QueryParser:Tokenize(text)
 
@@ -152,7 +152,7 @@ function FilterFrame:SyncEditBox()
 end
 
 --- @private
-function FilterFrame:EditBox_OnEnterPressed()
+function Filter:EditBox_OnEnterPressed()
 	local text = self.editBox:GetText()
 
 	if text ~= LogSinkTableDB.currentFilter then
@@ -171,7 +171,7 @@ function FilterFrame:EditBox_OnEnterPressed()
 end
 
 --- @private
-function FilterFrame:EditBox_OnTextChanged()
+function Filter:EditBox_OnTextChanged()
 	SearchBoxTemplate_OnTextChanged(self.editBox)
 
 	self:SyncEditBox()
@@ -179,7 +179,7 @@ end
 
 --- @private
 --- @param x number
-function FilterFrame:EditBox_OnCursorChanged(x)
+function Filter:EditBox_OnCursorChanged(x)
 	local text = self.editBox:GetText()
 	local pos = self.editBox:GetCursorPosition()
 
@@ -202,7 +202,7 @@ function FilterFrame:EditBox_OnCursorChanged(x)
 end
 
 --- @private
-function FilterFrame:EditBox_OnEditFocusGained()
+function Filter:EditBox_OnEditFocusGained()
 	SearchBoxTemplate_OnEditFocusGained(self.editBox)
 
 	self.cursor:Show();
@@ -210,7 +210,7 @@ function FilterFrame:EditBox_OnEditFocusGained()
 end
 
 --- @private
-function FilterFrame:EditBox_OnEditFocusLost()
+function Filter:EditBox_OnEditFocusLost()
 	SearchBoxTemplate_OnEditFocusLost(self.editBox)
 
 	self.cursor:Hide();
@@ -218,8 +218,10 @@ function FilterFrame:EditBox_OnEditFocusLost()
 end
 
 --- @private
-function FilterFrame:EditBox_ClearButton_OnClick()
+function Filter:EditBox_ClearButton_OnClick()
 	self:EditBox_OnEnterPressed()
 end
 
-Addon.FilterFrame = FilterFrame
+--- @class TableFrame
+local TableFrame = Addon.TableFrame
+TableFrame.UI.Filter = Filter

@@ -28,9 +28,10 @@ QueryParser.lua
 Filter.lua
 Buffer.lua
 ChunkedBufferReader.lua
-Window.lua
-Templates.xml
-UI\FilterFrame.lua
-UI\HeaderFrame.lua
-UI\StatusFrame.lua
-UI\TableFrame.lua
+
+TableFrame.lua
+TableFrameTemplates.xml
+TableFrameUI\Filter.lua
+TableFrameUI\Header.lua
+TableFrameUI\Status.lua
+TableFrameUI\Table.lua

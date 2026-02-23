@@ -51,7 +51,7 @@ local function HandleChatCommand(input)
 	end
 
 	if #args == 0 then
-		Addon.Window:Open()
+		Addon.TableFrame:Open()
 	elseif #args >= 1 then
 		if args[1] == "test" then
 			Addon.QueryParser:TestSuite()

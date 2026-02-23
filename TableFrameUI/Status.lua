@@ -1,28 +1,28 @@
 --- @class Addon
 local Addon = select(2, ...)
 
---- @class StatusFrame : Frame
+--- @class TableFrameUI.Status : Frame
 --- @field public onLiveButtonClick? fun()
 --- @field private text FontString
 --- @field private status string
 --- @field private liveButton Button
 --- @field private temporaryStatusTimer? FunctionContainer
-local StatusFrame = {}
+local Status = {}
 
 local TEMPORARY_TEXT_DURATION = 3
 
 --- @param parent Frame
---- @return StatusFrame
-function StatusFrame.Create(parent)
+--- @return TableFrameUI.Status
+function Status.Create(parent)
 	local base = CreateFrame("Frame", nil, parent)
 
-	local result = Mixin(base, StatusFrame)
+	local result = Mixin(base, Status)
 	result:Init()
 
 	return result
 end
 
-function StatusFrame:SetText(text)
+function Status:SetText(text)
 	self.status = text
 
 	if self.temporaryStatusTimer == nil then
@@ -31,7 +31,7 @@ function StatusFrame:SetText(text)
 end
 
 --- @param text string
-function StatusFrame:SetTemporaryText(text)
+function Status:SetTemporaryText(text)
 	if self.temporaryStatusTimer ~= nil then
 		self.temporaryStatusTimer:Cancel()
 	end
@@ -44,7 +44,7 @@ function StatusFrame:SetTemporaryText(text)
 end
 
 --- @param show boolean
-function StatusFrame:ShowLiveButton(show)
+function Status:ShowLiveButton(show)
 	if show then
 		self.liveButton:Show()
 	else
@@ -53,7 +53,7 @@ function StatusFrame:ShowLiveButton(show)
 end
 
 --- @private
-function StatusFrame:Init()
+function Status:Init()
 	self.text = self:CreateFontString(nil, "ARTWORK", "ChatFontNormal")
 	self.text:SetPoint("TOPLEFT", self, "TOPLEFT")
 	self.text:SetPoint("BOTTOMRIGHT", self, "BOTTOM")
@@ -72,10 +72,12 @@ function StatusFrame:Init()
 end
 
 --- @private
-function StatusFrame:LiveButton_OnClick()
+function Status:LiveButton_OnClick()
 	if self.onLiveButtonClick ~= nil then
 		self.onLiveButtonClick()
 	end
 end
 
-Addon.StatusFrame = StatusFrame
+--- @class TableFrame
+local TableFrame = Addon.TableFrame
+TableFrame.UI.Status = Status

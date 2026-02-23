@@ -28,10 +28,10 @@ local LibLog = LibStub("LibLog-1.0")
 --- @class Addon
 local Addon = select(2, ...)
 
---- @class Window
-local Window = {}
-
-Window.DEFAULT_COLUMN_WIDTH = 100
+--- @class TableFrame
+local TableFrame = {}
+TableFrame.UI = {}
+TableFrame.DEFAULT_COLUMN_WIDTH = 100
 
 --- @type ColumnConfig[]
 local COLUMN_DEFAULTS = {
@@ -79,9 +79,9 @@ local COLUMN_VISUALIZERS = {
 local SCROLL_THROTTLE = 0.3
 
 --- @type ColumnConfig[]
-Window.columns = CopyTable(COLUMN_DEFAULTS)
+TableFrame.columns = CopyTable(COLUMN_DEFAULTS)
 
-function Window:Open()
+function TableFrame:Open()
 	if self:IsOpen() then
 		return
 	end
@@ -98,13 +98,13 @@ function Window:Open()
 	self.frame:Show()
 end
 
-function Window:IsOpen()
+function TableFrame:IsOpen()
 	return self.frame ~= nil and self.frame:IsVisible()
 end
 
 --- @param key string
 --- @param after? integer
-function Window:AddColumn(key, after)
+function TableFrame:AddColumn(key, after)
 	if self:HasColumn(key) then
 		return
 	end
@@ -127,7 +127,7 @@ function Window:AddColumn(key, after)
 	column = column or {
 		name = key,
 		key = key,
-		width = Window.DEFAULT_COLUMN_WIDTH
+		width = TableFrame.DEFAULT_COLUMN_WIDTH
 	}
 
 	table.insert(self.columns, after, column)
@@ -137,7 +137,7 @@ function Window:AddColumn(key, after)
 end
 
 --- @param key string
-function Window:RemoveColumn(key)
+function TableFrame:RemoveColumn(key)
 	local contains, position = self:HasColumn(key)
 
 	if contains then
@@ -150,7 +150,7 @@ end
 
 --- @param key string
 --- @param position integer
-function Window:ReorderColumn(key, position)
+function TableFrame:ReorderColumn(key, position)
 	local contains, originalPosition = self:HasColumn(key)
 
 	if contains then
@@ -165,7 +165,7 @@ end
 --- @param key string
 --- @return boolean contains
 --- @return integer? position
-function Window:HasColumn(key)
+function TableFrame:HasColumn(key)
 	for i = 1, #self.columns do
 		if key == self.columns[i].key then
 			return true, i
@@ -175,7 +175,7 @@ function Window:HasColumn(key)
 	return false
 end
 
-function Window:ResetColumns()
+function TableFrame:ResetColumns()
 	wipe(self.columns)
 
 	for _, v in ipairs(COLUMN_DEFAULTS) do
@@ -187,7 +187,7 @@ function Window:ResetColumns()
 end
 
 --- @param text string
-function Window:AppendQueryString(text)
+function TableFrame:AppendQueryString(text)
 	local fullText = self.filter:GetText()
 	local tokens = Addon.QueryParser:Tokenize(fullText)
 
@@ -207,12 +207,12 @@ end
 
 --- @param key string
 --- @return ColumnVisualizer?
-function Window:GetColumnVisualizer(key)
+function TableFrame:GetColumnVisualizer(key)
 	return COLUMN_VISUALIZERS[key]
 end
 
 --- @private
-function Window:CreateWindow()
+function TableFrame:CreateWindow()
 	if LogSinkTableDB.columns ~= nil then
 		self.columns = LogSinkTableDB.columns
 	end
@@ -220,30 +220,30 @@ function Window:CreateWindow()
 	self:CreateFrame()
 	self:CreateContentContainer()
 
-	self.filter = Addon.FilterFrame.Create(self.container)
+	self.filter = TableFrame.UI.Filter.Create(self.container)
 	self.filter:SetPoint("TOPLEFT", self.container, "TOPLEFT")
 	self.filter:SetPoint("BOTTOMRIGHT", self.container, "TOPRIGHT", 0, -20)
 	self.filter.onQueryStringChanged = function(...) self:Filter_OnQueryStringChanged(...) end
 
-	self.header = Addon.HeaderFrame.Create(self.container, self.columns)
+	self.header = TableFrame.UI.Header.Create(self.container, self.columns)
 	self.header:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
 	self.header:SetPoint("TOPRIGHT", self.filter, "BOTTOMRIGHT", 0, -10)
 	self.header:SetHeight(24)
 	self.header.onColumnResized = function(...) self:Header_OnColumnsResized(...) end
 
-	self.status = Addon.StatusFrame.Create(self.container)
+	self.status = TableFrame.UI.Status.Create(self.container)
 	self.status:SetPoint("TOPLEFT", self.container, "BOTTOMLEFT", 0, 20)
 	self.status:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT")
 	self.status.onLiveButtonClick = function() self:Status_OnLiveButtonClick() end
 
-	self.table = Addon.TableFrame.Create(self.container, self.columns)
+	self.table = TableFrame.UI.Table.Create(self.container, self.columns)
 	self.table:SetPoint("TOPLEFT", self.header, "BOTTOMLEFT", 0, 0)
 	self.table:SetPoint("BOTTOMRIGHT", self.status, "TOPRIGHT")
 	self.table.onScroll = function(...) self:Table_OnScroll(...) end
 end
 
 --- @private
-function Window:CreateFrame()
+function TableFrame:CreateFrame()
 	self.frame = CreateFrame("Frame", "LogSinkTableFrame", UIParent, "DefaultPanelFlatTemplate")
 	self.frame:SetSize(800, 500)
 	self.frame:SetPoint("CENTER")
@@ -266,7 +266,7 @@ function Window:CreateFrame()
 end
 
 --- @private
-function Window:CreateFrameResizers()
+function TableFrame:CreateFrameResizers()
 	local function SE_OnMouseDown()
 		self.frame:StartSizing("BOTTOMRIGHT")
 	end
@@ -309,7 +309,7 @@ function Window:CreateFrameResizers()
 end
 
 --- @private
-function Window:CreateContentContainer()
+function TableFrame:CreateContentContainer()
 	local INSET_LEFT = 12
 	local INSET_RIGHT = -7
 	local INSET_TOP = -27
@@ -321,7 +321,7 @@ function Window:CreateContentContainer()
 end
 
 --- @private
-function Window:UpdateSearchButtonVisibility()
+function TableFrame:UpdateSearchButtonVisibility()
 	local visible = not self.table.scrollBar:HasScrollableExtent() and self.bufferReader:HasPreviousLogs() and not self.hasFilterError
 
 	if visible and not self.searchButtonVisible then
@@ -338,12 +338,12 @@ function Window:UpdateSearchButtonVisibility()
 end
 
 --- @private
-function Window:UpdateTailButtonVisibility()
+function TableFrame:UpdateTailButtonVisibility()
 	self.status:ShowLiveButton(not self.tail and not self.hasFilterError)
 end
 
 --- @private
-function Window:InitializeTable()
+function TableFrame:InitializeTable()
 	if self.isMidUpdate then
 		return
 	end
@@ -371,7 +371,7 @@ end
 
 --- @private
 --- @param direction integer
-function Window:LoadTableChunk(direction)
+function TableFrame:LoadTableChunk(direction)
 	if self.isMidUpdate then
 		return
 	end
@@ -423,7 +423,7 @@ end
 
 --- @private
 --- @param text? string
-function Window:UpdateQueryString(text)
+function TableFrame:UpdateQueryString(text)
 	self.hasFilterError = false
 
 	if text ~= nil then
@@ -445,12 +445,12 @@ function Window:UpdateQueryString(text)
 end
 
 --- @private
-function Window:BufferReader_OnBufferSet()
+function TableFrame:BufferReader_OnBufferSet()
 	self:UpdateQueryString(LogSinkTableDB.currentFilter)
 end
 
 --- @private
-function Window:BufferReader_OnMessageAdded()
+function TableFrame:BufferReader_OnMessageAdded()
 	if self.tail then
 		self.hasMessagesPending = true
 	end
@@ -459,7 +459,7 @@ function Window:BufferReader_OnMessageAdded()
 end
 
 --- @private
-function Window:Frame_OnUpdate()
+function TableFrame:Frame_OnUpdate()
 	if self.hasMessagesPending then
 		self:LoadTableChunk(1)
 		self.hasMessagesPending = false
@@ -478,7 +478,7 @@ function Window:Frame_OnUpdate()
 end
 
 --- @private
-function Window:Frame_CloseButton_OnClick()
+function TableFrame:Frame_CloseButton_OnClick()
 	self.hasFilterError = false
 	self.hasMessagesPending = false
 	self.isMidUpdate = false
@@ -494,25 +494,25 @@ end
 
 --- @private
 --- @param text string
-function Window:Filter_OnQueryStringChanged(text)
+function TableFrame:Filter_OnQueryStringChanged(text)
 	self:UpdateQueryString(text)
 end
 
 --- @private
 --- @param column integer
-function Window:Header_OnColumnsResized(column)
+function TableFrame:Header_OnColumnsResized(column)
 	self.table:ResizeColumn(column)
 end
 
 --- @private
-function Window:Status_OnLiveButtonClick()
+function TableFrame:Status_OnLiveButtonClick()
 	self:InitializeTable()
 end
 
 --- @private
 --- @param position number
 --- @param direction integer
-function Window:Table_OnScroll(position, direction)
+function TableFrame:Table_OnScroll(position, direction)
 	if self.isMidUpdate then
 		return
 	end
@@ -525,4 +525,4 @@ function Window:Table_OnScroll(position, direction)
 	self.wantsScroll = direction
 end
 
-Addon.Window = Window
+Addon.TableFrame = TableFrame

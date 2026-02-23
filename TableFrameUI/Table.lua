@@ -1,25 +1,25 @@
 --- @class Addon
 local Addon = select(2, ...)
 
---- @class TableCellFrame : Button
+--- @class TableFrameUI.TableCell : Button
 --- @field public Text FontString
 --- @field public data LibLog-1.0.LogMessage
 --- @field public config ColumnConfig
 
---- @class TableRowFrame : Frame
---- @field public cells TableCellFrame[]
+--- @class TableFrameUI.TableRow : Frame
+--- @field public cells TableFrameUI.TableCell[]
 --- @field public Highlight Texture
 
---- @class TableRowHeaderFrame : Frame
+--- @class TableFrameUI.TableRowHeader : Frame
 --- @field public Text FontString
 
---- @class TableFrame : Frame
+--- @class TableFrameUI.Table : Frame
 --- @field public onScroll? fun(position: number, direction: integer)
 --- @field public dataProvider DataProviderMixin
 --- @field public scrollBar MinimalScrollBar
 --- @field public scrollBox WowScrollBoxList
 --- @field private columns ColumnConfig[]
-local TableFrame = {}
+local Table = {}
 
 local ROW_HEIGHT = 22
 
@@ -80,7 +80,7 @@ end
 --- @param entry LibLog-1.0.LogMessage
 --- @return unknown
 local function GetValue(config, entry)
-	local visualizer = Addon.Window:GetColumnVisualizer(config.key)
+	local visualizer = Addon.TableFrame:GetColumnVisualizer(config.key)
 
 	if visualizer ~= nil and visualizer.get ~= nil then
 		return visualizer.get(entry)
@@ -91,23 +91,23 @@ end
 
 --- @param parent Frame
 --- @param columns ColumnConfig[]
---- @return TableFrame
-function TableFrame.Create(parent, columns)
+--- @return TableFrameUI.Table
+function Table.Create(parent, columns)
 	local base = CreateFrame("Frame", nil, parent)
 
-	local result = Mixin(base, TableFrame)
+	local result = Mixin(base, Table)
 	result.columns = columns
 	result:Init()
 
 	return result
 end
 
-function TableFrame:UpdateColumns()
+function Table:UpdateColumns()
 	self.scrollBox:Rebuild(true)
 end
 
 --- @param column integer
-function TableFrame:ResizeColumn(column)
+function Table:ResizeColumn(column)
 	self.scrollBox:ForEachFrame(function(frame)
 		local config = self.columns[column]
 		local cell = frame.cells[column]
@@ -119,7 +119,7 @@ function TableFrame:ResizeColumn(column)
 end
 
 --- @private
-function TableFrame:Init()
+function Table:Init()
 	self.scrollBar = CreateFrame("EventFrame", nil, self, "MinimalScrollBar")
     self.scrollBar:SetPoint("TOPRIGHT", self, "TOPRIGHT", -5, 0)
     self.scrollBar:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -5, 0)
@@ -162,17 +162,17 @@ function TableFrame:Init()
 end
 
 --- @private
---- @param frame TableRowHeaderFrame
-function TableFrame:SetupHeaderRow(frame)
+--- @param frame TableFrameUI.TableRowHeader
+function Table:SetupHeaderRow(frame)
 	frame.Text:SetText(Addon.L["Click to search further back..."])
 
 	frame:SetScript("OnClick", function() self:HeaderRow_OnClick() end)
 end
 
 --- @private
---- @param frame TableRowFrame
+--- @param frame TableFrameUI.TableRow
 --- @param entry LibLog-1.0.LogMessage
-function TableFrame:SetupRow(frame, entry)
+function Table:SetupRow(frame, entry)
 	local cells = frame.cells
 
 	for i, config in ipairs(self.columns) do
@@ -224,42 +224,42 @@ end
 
 --- @private
 --- @param scrollPercentage number
-function TableFrame:ScrollBox_OnScroll(_, scrollPercentage)
+function Table:ScrollBox_OnScroll(_, scrollPercentage)
 	if self.onScroll ~= nil then
 		self.onScroll(scrollPercentage, scrollPercentage <= 0 and -1 or scrollPercentage >= 1 and 1 or 0)
 	end
 end
 
 --- @private
-function TableFrame:HeaderRow_OnClick()
+function Table:HeaderRow_OnClick()
 	if self.onScroll ~= nil then
 		self.onScroll(0, -1)
 	end
 end
 
 --- @private
---- @param frame TableRowFrame
-function TableFrame:LogRow_OnEnter(frame)
+--- @param frame TableFrameUI.TableRow
+function Table:LogRow_OnEnter(frame)
 	frame.Highlight:Show()
 end
 
 --- @private
---- @param frame TableRowFrame
-function TableFrame:LogRow_OnLeave(frame)
+--- @param frame TableFrameUI.TableRow
+function Table:LogRow_OnLeave(frame)
 	frame.Highlight:Hide()
 end
 
 --- @private
 --- @param entry LibLog-1.0.LogMessage
-function TableFrame:LogRow_OnClick(entry)
+function Table:LogRow_OnClick(entry)
 	UIParentLoadAddOn("Blizzard_DebugTools")
 	DisplayTableInspectorWindow(entry)
 end
 
 --- @private
---- @param frame TableCellFrame
+--- @param frame TableFrameUI.TableCell
 --- @param button string
-function TableFrame:LogCell_OnMouseUp(frame, button)
+function Table:LogCell_OnMouseUp(frame, button)
 	if button ~= "RightButton" then
 		return
 	end
@@ -285,7 +285,7 @@ function TableFrame:LogCell_OnMouseUp(frame, button)
 				filter = filter .. value
 			end
 
-			Addon.Window:AppendQueryString(filter)
+			Addon.TableFrame:AppendQueryString(filter)
 		end)
 		addFilter:SetEnabled(type(value) ~= "nil" and type(value) ~= "table")
 
@@ -298,10 +298,13 @@ function TableFrame:LogCell_OnMouseUp(frame, button)
 				filter = filter .. value
 			end
 
-			Addon.Window:AppendQueryString(filter)
+			Addon.TableFrame:AppendQueryString(filter)
 		end)
 		addExclude:SetEnabled(type(value) ~= "nil" and type(value) ~= "table")
 	end)
 end
 
-Addon.TableFrame = TableFrame
+
+--- @class TableFrame
+local TableFrame = Addon.TableFrame
+TableFrame.UI.Table = Table
