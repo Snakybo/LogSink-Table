@@ -2,6 +2,11 @@
 
 A sink for [LibLog-1.0](https://github.com/Snakybo/LibLog-1.0) that adds a table view that allows you to inspect and filter on live logs.
 
+![Filters](.github/filters.png)
+![Inspector](.github/inspector.png)
+![Comparisons](.github/comparisons.png)
+![Timeframes](.github/timeframes.png)
+
 ## Query engine
 
 With the query engine you can filter logs based on any property. You can compare against a literal (string, number), or the value of another property.
@@ -106,5 +111,3 @@ The table view allows you to view the (filtered) log stream in real-time.
 You can add, remove, or adjust columns based on any available property within the logs, allowing you to quickly extract useful information. You can also copy data from an individual cell, or add filters for the cell value directly from a context menu.
 
 Clicking on a row opens a dedicated inspection window, this will show a breakdown of all log properties in a simple list.
-
-
