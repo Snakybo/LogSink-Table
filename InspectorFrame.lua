@@ -1,0 +1,67 @@
+--- @class Addon
+local Addon = select(2, ...)
+
+--- @class InspectorFrame
+local InspectorFrame = {}
+InspectorFrame.UI = {}
+
+--- @param data LibLog-1.0.LogMessage
+function InspectorFrame:Open(data)
+	if self.frame == nil then
+		self:CreateWindow()
+	end
+
+	self.header:SetText(data.message)
+	self.table:SetData(data)
+	self.frame:Show()
+end
+
+--- @private
+function InspectorFrame:CreateWindow()
+	self:CreateFrame()
+	self:CreateContentContainer()
+
+	self.header = InspectorFrame.UI.Header.Create(self.container)
+	self.header:SetPoint("TOPLEFT", self.container, "TOPLEFT", 1, -1)
+	self.header:SetPoint("TOPRIGHT", self.container, "TOPRIGHT", 1, -1)
+	self.header:SetHeight(80)
+
+	self.table = InspectorFrame.UI.Table.Create(self.container)
+	self.table:SetPoint("TOPLEFT", self.header, "BOTTOMLEFT", 0, -10)
+	self.table:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT", 0, 10)
+end
+
+--- @private
+function InspectorFrame:CreateFrame()
+	local parent = Addon.TableFrame.frame
+
+	self.frame = CreateFrame("Frame", "LogSinkInspectorFrame", parent, "DefaultPanelFlatTemplate")
+	self.frame:SetPoint("TOPLEFT", parent, "TOPRIGHT", 0, 0)
+	self.frame:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 0, 0)
+	self.frame:SetWidth(400)
+	self.frame:SetFrameStrata("HIGH")
+
+	self.frame.CloseButton = CreateFrame("Button", nil, self.frame, "UIPanelCloseButtonDefaultAnchors")
+	self.frame.CloseButton:SetScript("OnClick", function() self:Frame_CloseButton_OnClick() end)
+
+	self.frame.TitleContainer.TitleText:SetText(Addon.L["Log Inspector"])
+end
+
+--- @private
+function InspectorFrame:CreateContentContainer()
+	local INSET_LEFT = 12
+	local INSET_RIGHT = -10
+	local INSET_TOP = -27
+	local INSET_BOTTOM = 8
+
+	self.container = CreateFrame("Frame", nil, self.frame)
+	self.container:SetPoint("TOPLEFT", self.frame, "TOPLEFT", INSET_LEFT, INSET_TOP)
+	self.container:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
+end
+
+--- @private
+function InspectorFrame:Frame_CloseButton_OnClick()
+	self.frame:Hide()
+end
+
+Addon.InspectorFrame = InspectorFrame

@@ -35,3 +35,8 @@ TableFrameUI\Filter.lua
 TableFrameUI\Header.lua
 TableFrameUI\Status.lua
 TableFrameUI\Table.lua
+
+InspectorFrame.lua
+InspectorFrameTemplates.xml
+InspectorFrameUI\Header.lua
+InspectorFrameUI\Table.lua

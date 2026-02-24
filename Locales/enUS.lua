@@ -44,3 +44,4 @@ L["Copy value"] = true
 L["Copy data"] = true
 L["Add filter"] = true
 L["Exclude value"] = true
+L["Log Inspector"] = true

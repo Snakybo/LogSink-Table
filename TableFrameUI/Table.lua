@@ -23,21 +23,6 @@ local Table = {}
 
 local ROW_HEIGHT = 22
 
-StaticPopupDialogs["LOGSINK_COPY_TEXT"] = {
-    text = Addon.L["Press Ctrl+C to copy"],
-    button1 = DONE,
-    hasEditBox = true,
-	editBoxWidth = 260,
-	OnShow = function(self, data)
-		self.EditBox:SetText(data)
-		self.EditBox:SetCursorPosition(0)
-		self.EditBox:HighlightText()
-	end,
-	EditBoxOnEscapePressed = StaticPopup_StandardEditBoxOnEscapePressed,
-    timeout = 0,
-    whileDead = true
-}
-
 --- @param tbl table
 --- @param indentChar string
 --- @param sepChar string
@@ -252,8 +237,7 @@ end
 --- @private
 --- @param entry LibLog-1.0.LogMessage
 function Table:LogRow_OnClick(entry)
-	UIParentLoadAddOn("Blizzard_DebugTools")
-	DisplayTableInspectorWindow(entry)
+	Addon.InspectorFrame:Open(entry)
 end
 
 --- @private

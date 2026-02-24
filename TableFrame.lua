@@ -311,7 +311,7 @@ end
 --- @private
 function TableFrame:CreateContentContainer()
 	local INSET_LEFT = 12
-	local INSET_RIGHT = -7
+	local INSET_RIGHT = -10
 	local INSET_TOP = -27
 	local INSET_BOTTOM = 8
 

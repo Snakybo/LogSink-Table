@@ -24,6 +24,21 @@ Addon.L = LibStub("AceLocale-3.0"):GetLocale("LogSinkTable")
 --- @class LogSinkTable : AceAddon, AceEvent-3.0, LibLog-1.0.Logger
 LogSinkTable = LibStub("AceAddon-3.0"):NewAddon("LogSinkTable", "AceEvent-3.0", "LibLog-1.0")
 
+StaticPopupDialogs["LOGSINK_COPY_TEXT"] = {
+    text = Addon.L["Press Ctrl+C to copy"],
+    button1 = DONE,
+    hasEditBox = true,
+	editBoxWidth = 260,
+	OnShow = function(self, data)
+		self.EditBox:SetText(data)
+		self.EditBox:SetCursorPosition(0)
+		self.EditBox:HighlightText()
+	end,
+	EditBoxOnEscapePressed = StaticPopup_StandardEditBoxOnEscapePressed,
+    timeout = 0,
+    whileDead = true
+}
+
 --- @param message LibLog-1.0.LogMessage
 local function OnLogReceived(message)
 	if message.addon == nil then
