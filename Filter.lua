@@ -126,8 +126,8 @@ end
 --- @param rhs FilterValue
 --- @return boolean
 local function IsGreaterThan(entry, lhs, rhs)
-	local left = tonumber(GetOptionValue(entry, lhs)) or 0
-	local right = tonumber(GetOptionValue(entry, rhs)) or -1
+	local left = tonumber(GetOptionValue(entry, lhs)) or -1
+	local right = tonumber(GetOptionValue(entry, rhs)) or 0
 	return left > right
 end
 
@@ -136,8 +136,8 @@ end
 --- @param rhs FilterValue
 --- @return boolean
 local function IsGreaterThanOrEqualTo(entry, lhs, rhs)
-	local left = tonumber(GetOptionValue(entry, lhs)) or 0
-	local right = tonumber(GetOptionValue(entry, rhs)) or -1
+	local left = tonumber(GetOptionValue(entry, lhs)) or -1
+	local right = tonumber(GetOptionValue(entry, rhs)) or 0
 	return left >= right
 end
 
