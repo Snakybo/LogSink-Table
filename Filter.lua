@@ -40,7 +40,22 @@ local function GetOptionValue(entry, option)
 	end
 
 	if option.type == Addon.TokenType.Property then
-		return entry[option.value] or entry.properties[option.value]
+		local value = entry[option.value] or entry.properties[option.value]
+		if value ~= nil then
+			return value
+		end
+
+		local current = entry.properties
+		local path = option.value
+
+		for segment in string.gmatch(path, "([^%.]+)") do
+			if type(current) == "table" then
+				local index = tonumber(segment) or segment
+				current = current[index]
+			end
+		end
+
+		return current
 	end
 
 	return option.value

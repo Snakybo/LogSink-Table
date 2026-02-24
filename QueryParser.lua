@@ -275,8 +275,8 @@ function QueryParser:Tokenize(filter, ignoreVisualTokens, depth)
 					token.type = TokenType.Time
 				end
 			end
-		elseif char:match("[%w%.%:]") then
-			local _, endIndex = filter:find('^[%w%.%:]+', cursor)
+		elseif char:match("[%a%_]") then
+			local _, endIndex = filter:find('^[%a%.%d%:%_]+', cursor)
 
 			token = {
 				type = TokenType.Property,
@@ -626,6 +626,9 @@ function QueryParser:TestSuite()
 	Test('alive = true', true)
 	Test('alive ~= true', false)
 	Test('alive = false', false)
+	Test('charName = party.1', true)
+	Test('charName = party.2', false)
+	Test('charName = party', false)
 
 	-- test for non-perfectly structured or malformed inputs
 	TestError('charName="Arthas"', true)
