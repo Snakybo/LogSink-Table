@@ -37,7 +37,7 @@ local function FlattenData(data, prefix, result)
 	prefix = prefix and (prefix .. ".") or ""
 
 	for k, v in pairs(data) do
-		local path = prefix .. tostring(k)
+		local path = string.gsub(prefix .. tostring(k), "^properties%.", "")
 
 		if type(v) == "table" then
 			FlattenData(v, path, result)
@@ -165,7 +165,7 @@ function Table:Row_OnMouseDown(frame, button, data)
 		end)
 
 		root:CreateButton(Addon.L["Add filter"], function()
-			local filter = data.key:gsub("^properties%.", "") .. " = "
+			local filter = data.key .. " = "
 
 			if type(data.value) == "string" then
 				filter = filter .. '"' .. data.value .. '"'
@@ -177,7 +177,7 @@ function Table:Row_OnMouseDown(frame, button, data)
 		end)
 
 		root:CreateButton(Addon.L["Exclude value"], function()
-			local filter = data.key:gsub("^properties%.", "") .. " ~= "
+			local filter = data.key .. " ~= "
 
 			if type(data.value) == "string" then
 				filter = filter .. '"' .. data.value .. '"'
