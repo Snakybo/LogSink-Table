@@ -417,7 +417,7 @@ function QueryParser:ParseTokens(tokens)
 
 			if operatorToken == nil then
 				return "cannot parse operator"
-			elseif not operatorsCache[operatorToken.value] then
+			elseif not operatorsCache[operatorToken.value:upper()] then
 				return "invalid operator: " .. operatorToken.value
 			elseif valueToken == nil then
 				return "cannot parse value"
