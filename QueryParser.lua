@@ -38,6 +38,7 @@ local QueryParser = {}
 local TokenType = {
 	Whitespace = "whitespace",
 	Number = "number",
+	Boolean = "boolean",
 	String = "string",
 	Property = "property",
 	Nil = "nil",
@@ -82,6 +83,8 @@ local NOT = "NOT"
 local NIL = "NIL"
 local AGO = "ago"
 local LEVEL = "level"
+local TRUE = "true"
+local FALSE = "false"
 
 --- @type table<string, boolean>
 local operatorsCache = {}
@@ -125,6 +128,8 @@ local function SanitizeTokenValue(token, attributeToken, operatorToken)
 		return token.value:sub(2, -2)
 	elseif token.type == TokenType.Number then
 		return tonumber(token.value)
+	elseif token.type == TokenType.Boolean then
+		return token.value == "true"
 	end
 
 	if token.type == TokenType.Keyword or token.type == TokenType.Operator then
@@ -288,10 +293,14 @@ function QueryParser:Tokenize(filter, ignoreVisualTokens, depth)
 				token.type = TokenType.Keyword
 			elseif operators[upper] then
 				token.type = TokenType.Operator
+			elseif lower == TRUE or lower == FALSE then
+				token.type = TokenType.Boolean
 			elseif previous ~= nil and previous.type == TokenType.Time and (TimeframeScales[lower] or lower == AGO) then
 				token.type = TokenType.Time
 			elseif upper == NIL then
 				token.type = TokenType.Nil
+			elseif tonumber(token.value) ~= nil then
+				token.type = TokenType.Number
 			end
 		else
 			local _, endIndex = filter:find('^[^%s%w"\'{}]+', cursor)
@@ -496,6 +505,7 @@ function QueryParser:TestSuite()
 			realmName = "Frostmourne",
 			health = 15,
 			mana = 20,
+			alive = true,
 			party = {
 				"Arthas",
 				"Khadgar"
@@ -613,6 +623,9 @@ function QueryParser:TestSuite()
 	Test('charName = nil', false)
 	Test('charName ~= nil', true)
 	Test('charName > 24', false)
+	Test('alive = true', true)
+	Test('alive ~= true', false)
+	Test('alive = false', false)
 
 	-- test for non-perfectly structured or malformed inputs
 	TestError('charName="Arthas"', true)

@@ -18,6 +18,7 @@ local COLOR_SCHEME = {
 	[Addon.TokenType.Property] = "ff80ffff",
 	[Addon.TokenType.String] = "ff1fff1f",
 	[Addon.TokenType.Number] = "ffffd100",
+	[Addon.TokenType.Boolean] = "ffffb86c",
 	[Addon.TokenType.Operator] = "ffffffff",
 	[Addon.TokenType.Time] = "ffff79c6",
 	[Addon.TokenType.Nil] = "ffff5555",
