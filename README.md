@@ -1,6 +1,6 @@
 # LogSink: Table
 
-A sink for [LibLog-1.0](https://www.curseforge.com/wow/addons/liblog-1-0) that adds a table view that allows you to see and filter on live logs.
+A sink for [LibLog-1.0](https://github.com/Snakybo/LibLog-1.0) that adds a table view that allows you to inspect and filter on live logs.
 
 ## Query engine
 
@@ -18,6 +18,13 @@ health <= 300
 mana > 50
 mana >= 500
 health ~= mana
+```
+
+This also works when either value is inside of a table:
+
+```txt
+party.1 = 'Arthas'
+causes.fullReload = true`
 ```
 
 ### Create intersections using `AND`
@@ -90,12 +97,14 @@ Of course, these can be combined with any other query:
 charName = 'Arthas' SINCE 1 hour ago
 ```
 
-Note that specifying absolute time is always in 24h format, `SINCE 12pm` is not currently supported.
+> Note that specifying absolute time is always in 24h format, `SINCE 12pm` is not currently supported.
 
 ## Table View
 
 The table view allows you to view the (filtered) log stream in real-time.
 
-You can add, remove, or adjust columns based on any available property within the logs, allowing you to quickly extract useful information.
+You can add, remove, or adjust columns based on any available property within the logs, allowing you to quickly extract useful information. You can also copy data from an individual cell, or add filters for the cell value directly from a context menu.
 
-Clicking on a log row opens a table inspect window containing all data for that log entry.
+Clicking on a row opens a dedicated inspection window, this will show a breakdown of all log properties in a simple list.
+
+
