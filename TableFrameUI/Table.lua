@@ -136,6 +136,10 @@ function Table:Init()
 			return true
 		end
 
+		if not l.isHeader and r.isHeader then
+			return false
+		end
+
 		if l.time == r.time then
 			return l.sequenceId < r.sequenceId
 		end
