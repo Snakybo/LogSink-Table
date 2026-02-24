@@ -7,6 +7,10 @@ A sink for [LibLog-1.0](https://github.com/Snakybo/LibLog-1.0) that adds a table
 ![Comparisons](.github/comparisons.png)
 ![Timeframes](.github/timeframes.png)
 
+## Usage
+
+Type `/logs` in-game to open the window.
+
 ## Query engine
 
 With the query engine you can filter logs based on any property. You can compare against a literal (string, number), or the value of another property.
