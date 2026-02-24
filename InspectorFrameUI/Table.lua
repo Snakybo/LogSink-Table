@@ -156,6 +156,10 @@ function Table:Row_OnMouseDown(frame, button, data)
 	end
 
 	MenuUtil.CreateContextMenu(frame, function(owner, root)
+		root:CreateButton(Addon.L["Copy key"], function()
+			StaticPopup_Show("LOGSINK_COPY_TEXT", nil, nil, tostring(data.key))
+		end)
+
 		root:CreateButton(Addon.L["Copy value"], function()
 			StaticPopup_Show("LOGSINK_COPY_TEXT", nil, nil, tostring(data.value))
 		end)
