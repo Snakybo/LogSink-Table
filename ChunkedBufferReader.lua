@@ -41,8 +41,8 @@ end
 function Reader:LoadPrevious()
 	local result, scanned, elapsedMs = self:LoadImpl(self.first, -1)
 
-	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, first = self.first }, function()
-		LogSinkTable:LogVerbose("Loaded previous chunk")
+	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, first = self.first }, function(logger)
+		logger:LogVerbose("Loaded previous chunk")
 	end)
 
 	return result, scanned, elapsedMs
@@ -54,8 +54,8 @@ end
 function Reader:LoadNext()
 	local result, scanned, elapsedMs = self:LoadImpl(self.last, 1)
 
-	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, last = self.last, count = #self.buffer }, function()
-		LogSinkTable:LogVerbose("Loaded next chunk")
+	LogSinkTable:WithLogContext({ found = #result, scanned = scanned, last = self.last, count = #self.buffer }, function(logger)
+		logger:LogVerbose("Loaded next chunk")
 	end)
 
 	return result, scanned, elapsedMs
