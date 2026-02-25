@@ -215,6 +215,8 @@ end
 function TableFrame:CreateWindow()
 	if LogSinkTableDB.columns ~= nil then
 		self.columns = LogSinkTableDB.columns
+	else
+		LogSinkTableDB.columns = self.columns
 	end
 
 	self:CreateFrame()
