@@ -123,7 +123,18 @@ function Table:Init()
 
 	self.dataProvider = CreateDataProvider()
 	self.dataProvider:SetSortComparator(function(l, r)
-		return l.key < r.key
+		if l.key == r.key then
+			return false
+		end
+
+		--- @param str string
+		local function Format(str)
+			return str:lower():gsub("(%d+)", function(n)
+				return string.format("%012d", n)
+			end)
+		end
+
+		return Format(l.key) < Format(r.key)
 	end, true)
 
     self.scrollBox:SetDataProvider(self.dataProvider)
