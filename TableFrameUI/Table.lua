@@ -9,6 +9,7 @@ local Addon = select(2, ...)
 --- @class TableFrameUI.TableRow : Frame
 --- @field public cells TableFrameUI.TableCell[]
 --- @field public Highlight Texture
+--- @field public Background Texture
 
 --- @class TableFrameUI.TableRowHeader : Frame
 --- @field public Text FontString
@@ -206,6 +207,12 @@ function Table:SetupRow(frame, entry)
 		frame.cells[i]:Hide()
 	end
 
+	if Addon.InspectorFrame:IsSelected(entry) then
+		frame.Background:Show()
+	else
+		frame.Background:Hide()
+	end
+
 	frame:SetScript("OnEnter", function(...) self:LogRow_OnEnter(...) end)
 	frame:SetScript("OnLeave", function(...) self:LogRow_OnLeave(...)  end)
 	frame:SetScript("OnClick", function() self:LogRow_OnClick(entry) end)
@@ -242,6 +249,11 @@ end
 --- @param entry LibLog-1.0.LogMessage
 function Table:LogRow_OnClick(entry)
 	Addon.InspectorFrame:Open(entry)
+	Addon.InspectorFrame.onClose = function()
+		self:InspectorFrame_OnClose()
+	end
+
+	self.scrollBox:Rebuild(true)
 end
 
 --- @private
@@ -290,6 +302,11 @@ function Table:LogCell_OnMouseUp(frame, button)
 		end)
 		addExclude:SetEnabled(type(value) ~= "nil" and type(value) ~= "table")
 	end)
+end
+
+--- @private
+function Table:InspectorFrame_OnClose()
+	self.scrollBox:Rebuild(true)
 end
 
 --- @class TableFrame

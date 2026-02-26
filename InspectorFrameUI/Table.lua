@@ -78,28 +78,30 @@ function Table.Create(parent)
 	return result
 end
 
---- @param data LibLog-1.0.LogMessage
+--- @param data? LibLog-1.0.LogMessage
 function Table:SetData(data)
-	local flattened = FlattenData(data)
-
-	local width = self.scrollBox:GetWidth()
-
-	for i = 1, #flattened do
-		local item = flattened[i]
-
-		self.measureText:SetWidth(0)
-		self.measureText:SetText(item.key)
-		item.keyWidth = min(width * 0.4, self.measureText:GetStringWidth())
-
-		self.measureText:SetWidth(width - item.keyWidth)
-		self.measureText:SetText(tostring(item.value))
-
-		local height = self.measureText:GetStringHeight()
-		item.height = ceil(height / ROW_HEIGHT) * ROW_HEIGHT
-	end
-
 	self.dataProvider:Flush()
-	self.dataProvider:InsertTable(flattened)
+
+	if data ~= nil then
+		local flattened = FlattenData(data)
+		local width = self.scrollBox:GetWidth()
+
+		for i = 1, #flattened do
+			local item = flattened[i]
+
+			self.measureText:SetWidth(0)
+			self.measureText:SetText(item.key)
+			item.keyWidth = min(width * 0.4, self.measureText:GetStringWidth())
+
+			self.measureText:SetWidth(width - item.keyWidth)
+			self.measureText:SetText(tostring(item.value))
+
+			local height = self.measureText:GetStringHeight()
+			item.height = ceil(height / ROW_HEIGHT) * ROW_HEIGHT
+		end
+
+		self.dataProvider:InsertTable(flattened)
+	end
 end
 
 --- @private

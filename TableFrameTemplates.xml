@@ -17,13 +17,18 @@
 	<Button name="LogTableRowTemplate" virtual="true">
 		<Size x="1" y="22"/>
 		<Layers>
+			<Layer level="BACKGROUND">
+                <Texture parentKey="Background" setAllPoints="true" hidden="true">
+                    <Color r="0.05" g="0.05" b="0.05" a="0.5"/>
+                </Texture>
+            </Layer>
+
 			<Layer level="OVERLAY">
-				<Texture parentKey="Highlight" setAllPoints="true" hidden="true" alphaMode="ADD">
+				<Texture parentKey="Highlight" setAllPoints="true" hidden="true">
 					<Color r="1" g="1" b="1" a="0.1"/>
 				</Texture>
 			</Layer>
 		</Layers>
-
 		<Scripts>
 			<OnLoad>
 				self.cells = {}

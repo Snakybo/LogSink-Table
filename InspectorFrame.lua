@@ -2,6 +2,8 @@
 local Addon = select(2, ...)
 
 --- @class InspectorFrame
+--- @field public onClose fun()
+--- @field private selected? LibLog-1.0.LogMessage
 local InspectorFrame = {}
 InspectorFrame.UI = {}
 
@@ -11,9 +13,17 @@ function InspectorFrame:Open(data)
 		self:CreateWindow()
 	end
 
+	self.selected = data
+
 	self.header:SetText(data.message)
 	self.table:SetData(data)
 	self.frame:Show()
+end
+
+--- @param data LibLog-1.0.LogMessage
+--- @return boolean
+function InspectorFrame:IsSelected(data)
+	return data == self.selected
 end
 
 --- @private
@@ -61,7 +71,14 @@ end
 
 --- @private
 function InspectorFrame:Frame_CloseButton_OnClick()
+	self.table:SetData(nil)
+	self.selected = nil
+
 	self.frame:Hide()
+
+	if self.onClose ~= nil then
+		self.onClose()
+	end
 end
 
 Addon.InspectorFrame = InspectorFrame
