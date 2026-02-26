@@ -46,3 +46,5 @@ L["Add filter"] = true
 L["Exclude value"] = true
 L["Log Inspector"] = true
 L["Copy key"] = true
+L["Focus"] = true
+L["Focusing..."] = true

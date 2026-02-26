@@ -29,6 +29,7 @@ local LibLog = LibStub("LibLog-1.0")
 local Addon = select(2, ...)
 
 --- @class TableFrame
+--- @field private autoScrollTarget? LibLog-1.0.LogMessage
 local TableFrame = {}
 TableFrame.UI = {}
 TableFrame.DEFAULT_COLUMN_WIDTH = 100
@@ -100,6 +101,23 @@ end
 
 function TableFrame:IsOpen()
 	return self.frame ~= nil and self.frame:IsVisible()
+end
+
+--- @param data LibLog-1.0.LogMessage
+function TableFrame:AutoScrollTo(data)
+	if self.table.scrollBox:ScrollToElementData(data, ScrollBoxConstants.AlignNearest, 0, ScrollBoxConstants.NoScrollInterpolation) ~= nil then
+		LogSinkTable:LogVerbose("Found entry in dataset, auto-scrolling")
+
+		self.autoScrollTarget = nil
+		return
+	end
+
+	LogSinkTable:LogVerbose("Did not find entry in dataset, enabling auto-scroll")
+	self.autoScrollTarget = data
+end
+
+function TableFrame:IsAutoScrolling()
+	return self.autoScrollTarget ~= nil
 end
 
 --- @param key string
@@ -242,6 +260,7 @@ function TableFrame:CreateWindow()
 	self.table:SetPoint("TOPLEFT", self.header, "BOTTOMLEFT", 0, 0)
 	self.table:SetPoint("BOTTOMRIGHT", self.status, "TOPRIGHT")
 	self.table.onScroll = function(...) self:Table_OnScroll(...) end
+	self.table.onClick = function() self:Table_OnClick() end
 end
 
 --- @private
@@ -361,6 +380,7 @@ function TableFrame:InitializeTable()
 		self.tail = true
 		self.searchButtonVisible = false
 		self.hasMessagesPending = false
+		self.autoScrollTarget = nil
 		self.table.dataProvider:InsertTable(chunk)
 	end
 
@@ -462,6 +482,46 @@ end
 
 --- @private
 function TableFrame:Frame_OnUpdate()
+	if self:IsAutoScrolling() then
+		self.hasMessagesPending = false
+		self.wantsScroll = 0
+
+		local target = self.autoScrollTarget --[[@as LibLog-1.0.LogMessage]]
+		local first = self.table.dataProvider:Find(1)
+		local last = self.table.dataProvider:Find(self.table.dataProvider:GetSize())
+
+		local firstNil = first == nil or first.isHeader
+		local lastNil = last == nil or last.isHeader
+
+		if firstNil or target.time < first.time or (target.time == first.time and target.sequenceId < first.sequenceId) then
+			if not self.bufferReader:HasPreviousLogs() then
+				LogSinkTable:LogVerbose("No previous logs found, cancelling auto-scroll")
+
+				self.autoScrollTarget = nil
+			else
+				LogSinkTable:LogVerbose("Auto-scrolling to previous page")
+
+				self:LoadTableChunk(-1)
+				self:AutoScrollTo(target)
+			end
+		elseif lastNil or target.time > last.time or (target.time == last.time and target.sequenceId > last.sequenceId) then
+			if not self.bufferReader:HasNextLogs() then
+				LogSinkTable:LogVerbose("No next logs found, cancelling auto-scroll")
+
+				self.autoScrollTarget = nil
+			else
+				LogSinkTable:LogVerbose("Auto-scrolling to next page")
+
+				self:LoadTableChunk(1)
+				self:AutoScrollTo(target)
+			end
+		else
+			LogSinkTable:LogVerbose("No match found, cancelling auto-scroll")
+
+			self.autoScrollTarget = nil
+		end
+	end
+
 	if self.hasMessagesPending then
 		self:LoadTableChunk(1)
 		self.hasMessagesPending = false
@@ -481,6 +541,7 @@ end
 
 --- @private
 function TableFrame:Frame_CloseButton_OnClick()
+	self.autoScrollTarget = nil
 	self.hasFilterError = false
 	self.hasMessagesPending = false
 	self.isMidUpdate = false
@@ -525,6 +586,11 @@ function TableFrame:Table_OnScroll(position, direction)
 	end
 
 	self.wantsScroll = direction
+end
+
+--- @private
+function TableFrame:Table_OnClick()
+	self.autoScrollTarget = nil
 end
 
 Addon.TableFrame = TableFrame

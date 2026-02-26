@@ -16,6 +16,7 @@ local Addon = select(2, ...)
 
 --- @class TableFrameUI.Table : Frame
 --- @field public onScroll? fun(position: number, direction: integer)
+--- @field public onClick? fun()
 --- @field public dataProvider DataProviderMixin
 --- @field public scrollBar MinimalScrollBar
 --- @field public scrollBox WowScrollBoxList
@@ -224,6 +225,24 @@ function Table:ScrollBox_OnScroll(_, scrollPercentage)
 	if self.onScroll ~= nil then
 		self.onScroll(scrollPercentage, scrollPercentage <= 0 and -1 or scrollPercentage >= 1 and 1 or 0)
 	end
+
+	local selected = Addon.InspectorFrame:GetSelected()
+
+	if selected ~= nil then
+		local index = self.scrollBox:FindElementDataIndex(selected)
+
+		if index ~= nil then
+			local topExtend = self.scrollBox:GetExtentUntil(index)
+			local bottomExtend = topExtend + self.scrollBox:GetElementExtent(index)
+
+			local visibleFirst = self.scrollBox:GetDerivedScrollOffset()
+			local visibleLast = visibleFirst + self.scrollBox:GetVisibleExtent()
+
+			Addon.InspectorFrame:SetIsFocused(topExtend >= visibleFirst and bottomExtend <= visibleLast)
+		else
+			Addon.InspectorFrame:SetIsFocused(false)
+		end
+	end
 end
 
 --- @private
@@ -254,6 +273,10 @@ function Table:LogRow_OnClick(entry)
 	end
 
 	self.scrollBox:Rebuild(true)
+
+	if self.onClick ~= nil then
+		self.onClick()
+	end
 end
 
 --- @private

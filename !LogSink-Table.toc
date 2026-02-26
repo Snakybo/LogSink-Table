@@ -38,5 +38,6 @@ TableFrameUI\Table.lua
 
 InspectorFrame.lua
 InspectorFrameTemplates.xml
+InspectorFrameUI\Focus.lua
 InspectorFrameUI\Header.lua
 InspectorFrameUI\Table.lua

@@ -17,6 +17,7 @@ function InspectorFrame:Open(data)
 
 	self.header:SetText(data.message)
 	self.table:SetData(data)
+	self.focus:SetVisible(false)
 	self.frame:Show()
 end
 
@@ -24,6 +25,20 @@ end
 --- @return boolean
 function InspectorFrame:IsSelected(data)
 	return data == self.selected
+end
+
+--- @param focused boolean
+function InspectorFrame:SetIsFocused(focused)
+	if self.frame == nil then
+		return
+	end
+
+	self.focus:SetVisible(not focused)
+end
+
+--- @return LibLog-1.0.LogMessage?
+function InspectorFrame:GetSelected()
+	return self.selected
 end
 
 --- @private
@@ -36,9 +51,14 @@ function InspectorFrame:CreateWindow()
 	self.header:SetPoint("TOPRIGHT", self.container, "TOPRIGHT", 1, -1)
 	self.header:SetHeight(80)
 
+	self.focus = InspectorFrame.UI.Focus.Create(self.container)
+	self.focus:SetPoint("TOPLEFT", self.container, "BOTTOMLEFT", 0, 20)
+	self.focus:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT")
+	self.focus.onClick = function() self:Focus_OnClick() end
+
 	self.table = InspectorFrame.UI.Table.Create(self.container)
 	self.table:SetPoint("TOPLEFT", self.header, "BOTTOMLEFT", 0, -10)
-	self.table:SetPoint("BOTTOMRIGHT", self.container, "BOTTOMRIGHT", 0, 10)
+	self.table:SetPoint("BOTTOMRIGHT", self.focus, "TOPRIGHT", 0, 10)
 end
 
 --- @private
@@ -79,6 +99,24 @@ function InspectorFrame:Frame_CloseButton_OnClick()
 	if self.onClose ~= nil then
 		self.onClose()
 	end
+end
+
+--- @private
+function InspectorFrame:Frame_OnUpdate()
+	if Addon.TableFrame:IsAutoScrolling() then
+		return
+	end
+
+	self.focus:SetFocusing(false)
+	self.frame:SetScript("OnUpdate", nil)
+end
+
+--- @private
+function InspectorFrame:Focus_OnClick()
+	Addon.TableFrame:AutoScrollTo(self.selected)
+
+	self.focus:SetFocusing(true)
+	self.frame:SetScript("OnUpdate", function() self:Frame_OnUpdate() end)
 end
 
 Addon.InspectorFrame = InspectorFrame
