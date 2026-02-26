@@ -94,6 +94,7 @@ function TableFrame:Open()
 	self.bufferReader = LogSinkTable:CreateChunkedBufferReader()
 	self.bufferReader.onBufferSet = function() self:BufferReader_OnBufferSet() end
 	self.bufferReader.onMessageAdded = function() self:BufferReader_OnMessageAdded() end
+	self.bufferReader.evaluate = function(...) return self:BufferReader_Evaluate(...) end
 
 	self:UpdateQueryString(LogSinkTableDB.currentFilter)
 	self.frame:Show()
@@ -237,6 +238,8 @@ function TableFrame:CreateWindow()
 		LogSinkTableDB.columns = self.columns
 	end
 
+	self.currentSessionOnly = LogSinkTableDB.currentSessionOnly
+
 	self:CreateFrame()
 	self:CreateContentContainer()
 
@@ -245,9 +248,14 @@ function TableFrame:CreateWindow()
 	self.filter:SetPoint("BOTTOMRIGHT", self.container, "TOPRIGHT", 0, -20)
 	self.filter.onQueryStringChanged = function(...) self:Filter_OnQueryStringChanged(...) end
 
+	self.options = TableFrame.UI.Options.Create(self.container)
+	self.options:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -3)
+	self.options:SetPoint("BOTTOMRIGHT", self.filter, "BOTTOMRIGHT", 0, -27)
+	self.options.currentSessionOnClick = function(...) self:CurrentSession_OnClick(...) end
+
 	self.header = TableFrame.UI.Header.Create(self.container, self.columns)
-	self.header:SetPoint("TOPLEFT", self.filter, "BOTTOMLEFT", 0, -10)
-	self.header:SetPoint("TOPRIGHT", self.filter, "BOTTOMRIGHT", 0, -10)
+	self.header:SetPoint("TOPLEFT", self.options, "BOTTOMLEFT", 0, -3)
+	self.header:SetPoint("TOPRIGHT", self.options, "BOTTOMRIGHT", 0, -3)
 	self.header:SetHeight(24)
 	self.header.onColumnResized = function(...) self:Header_OnColumnsResized(...) end
 
@@ -347,11 +355,12 @@ function TableFrame:UpdateSearchButtonVisibility()
 
 	if visible and not self.searchButtonVisible then
 		self.table.dataProvider:Insert({
-			isHeader = true
+			special = true,
+			type = TableFrame.UI.Table.MARKER_HEADER
 		})
 	elseif not visible and self.searchButtonVisible then
 		self.table.dataProvider:RemoveByPredicate(function(element)
-			return element.isHeader
+			return element.special and element.type == TableFrame.UI.Table.MARKER_HEADER
 		end)
 	end
 
@@ -361,6 +370,43 @@ end
 --- @private
 function TableFrame:UpdateTailButtonVisibility()
 	self.status:ShowLiveButton(not self.tail and not self.hasFilterError)
+end
+
+--- @param direction integer
+--- @param chunk LibLog-1.0.LogMessage[]
+function TableFrame:InsertSessionMarkers(direction, chunk)
+	local start
+
+	if direction < 0 then
+		for i = 1, self.table.dataProvider:GetSize() do
+			start = self.table.dataProvider:Find(i)
+
+			if not start.special then
+				break
+			end
+		end
+	else
+		start = self.table.dataProvider:Find(self.table.dataProvider:GetSize())
+	end
+
+	local last = start ~= nil and start.sessionId or math.huge
+
+	for i = 1, #chunk do
+		local entry = chunk[i]
+
+		--- @diagnostic disable-next-line: undefined-field
+		local sessionId = entry.sessionId or math.huge
+
+		if sessionId ~= last then
+			last = sessionId
+
+			self.table.dataProvider:Insert({
+				special = true,
+				type = TableFrame.UI.Table.MARKER_SESSION,
+				sessionId = sessionId
+			})
+		end
+	end
 end
 
 --- @private
@@ -382,6 +428,7 @@ function TableFrame:InitializeTable()
 		self.hasMessagesPending = false
 		self.autoScrollTarget = nil
 		self.table.dataProvider:InsertTable(chunk)
+		self:InsertSessionMarkers(-1, chunk)
 	end
 
 	self:UpdateTailButtonVisibility()
@@ -412,6 +459,7 @@ function TableFrame:LoadTableChunk(direction)
 
 			if #chunk > 0 then
 				self.table.dataProvider:InsertTable(chunk)
+				self:InsertSessionMarkers(-1, chunk)
 
 				if self.tail then
 					self.table.scrollBox:ScrollToEnd(ScrollBoxConstants.NoScrollInterpolation)
@@ -427,6 +475,7 @@ function TableFrame:LoadTableChunk(direction)
 
 			if #chunk > 0 then
 				self.table.dataProvider:InsertTable(chunk)
+				self:InsertSessionMarkers(1, chunk)
 				self.table.scrollBox:ScrollToElementDataIndex(#chunk, ScrollBoxConstants.AlignBegin, 0, ScrollBoxConstants.NoScrollInterpolation)
 			end
 		end
@@ -481,6 +530,17 @@ function TableFrame:BufferReader_OnMessageAdded()
 end
 
 --- @private
+--- @param entry LibLog-1.0.LogMessage
+function TableFrame:BufferReader_Evaluate(entry)
+	if entry == nil then
+		return false
+	end
+
+	--- @diagnostic disable-next-line: undefined-field
+	return not self.currentSessionOnly or entry.sessionId == nil
+end
+
+--- @private
 function TableFrame:Frame_OnUpdate()
 	if self:IsAutoScrolling() then
 		self.hasMessagesPending = false
@@ -490,8 +550,8 @@ function TableFrame:Frame_OnUpdate()
 		local first = self.table.dataProvider:Find(1)
 		local last = self.table.dataProvider:Find(self.table.dataProvider:GetSize())
 
-		local firstNil = first == nil or first.isHeader
-		local lastNil = last == nil or last.isHeader
+		local firstNil = first == nil or first.special
+		local lastNil = last == nil or last.special
 
 		if firstNil or target.time < first.time or (target.time == first.time and target.sequenceId < first.sequenceId) then
 			if not self.bufferReader:HasPreviousLogs() then
@@ -559,6 +619,14 @@ end
 --- @param text string
 function TableFrame:Filter_OnQueryStringChanged(text)
 	self:UpdateQueryString(text)
+end
+
+--- @private
+--- @param checked boolean
+function TableFrame:CurrentSession_OnClick(checked)
+	self.currentSessionOnly = checked
+
+	self:InitializeTable()
 end
 
 --- @private

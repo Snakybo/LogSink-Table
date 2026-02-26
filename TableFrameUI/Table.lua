@@ -11,8 +11,13 @@ local Addon = select(2, ...)
 --- @field public Highlight Texture
 --- @field public Background Texture
 
---- @class TableFrameUI.TableRowHeader : Frame
+--- @class TableFrameUI.TableRowHeader : Button
 --- @field public Text FontString
+
+--- @class TableFrameUI.TableRowSession : Frame
+--- @field public Text FontString
+--- @field public LineLeft Texture
+--- @field public LineRight Texture
 
 --- @class TableFrameUI.Table : Frame
 --- @field public onScroll? fun(position: number, direction: integer)
@@ -23,6 +28,10 @@ local Addon = select(2, ...)
 --- @field private columns ColumnConfig[]
 local Table = {}
 
+Table.MARKER_HEADER = "header"
+Table.MARKER_SESSION = "session"
+
+local SPECIAL_ROW_HEIGHT = 18
 local ROW_HEIGHT = 22
 
 --- @param tbl table
@@ -117,12 +126,21 @@ function Table:Init()
 	self.scrollBox:RegisterCallback("OnScroll", function(...) self:ScrollBox_OnScroll(...) end)
 
 	local view = CreateScrollBoxListLinearView()
-	view:SetElementExtent(ROW_HEIGHT)
+	view:SetElementExtentCalculator(function(index)
+		local item = self.dataProvider:Find(index)
+		return item.special and SPECIAL_ROW_HEIGHT or ROW_HEIGHT
+	end)
 	view:SetElementFactory(function(factory, node)
-		if node.sequenceId == nil and node.isHeader then
-			factory("LogTableRowHeaderTemplate", function(frame)
-				self:SetupHeaderRow(frame)
-			end)
+		if node.sequenceId == nil and node.special then
+			if node.type == Table.MARKER_HEADER then
+				factory("LogTableRowHeaderTemplate", function(frame)
+					self:SetupHeaderRow(frame)
+				end)
+			elseif node.type == Table.MARKER_SESSION then
+				factory("LogTableRowSessionTemplate", function(frame, element)
+					self:SetupSessionRow(frame, element)
+				end)
+			end
 		else
 			factory("LogTableRowTemplate", function(frame, element)
 				self:SetupRow(frame, element)
@@ -134,11 +152,26 @@ function Table:Init()
 
 	self.dataProvider = CreateDataProvider()
 	self.dataProvider:SetSortComparator(function(l, r)
-		if l.isHeader and not r.isHeader then
+		if l.type == Table.MARKER_HEADER and r.type ~= Table.MARKER_HEADER then
 			return true
 		end
 
-		if not l.isHeader and r.isHeader then
+		if l.type ~= Table.MARKER_HEADER and r.type == Table.MARKER_HEADER then
+			return false
+		end
+
+		local lSessionId = l.sessionId or math.huge
+		local rSessionId = r.sessionId or math.huge
+
+		if lSessionId ~= rSessionId then
+			return lSessionId < rSessionId
+		end
+
+		if l.type == Table.MARKER_SESSION and r.type ~= Table.MARKER_SESSION then
+			return true
+		end
+
+		if l.type ~= Table.MARKER_SESSION and r.type == Table.MARKER_SESSION then
 			return false
 		end
 
@@ -158,6 +191,17 @@ function Table:SetupHeaderRow(frame)
 	frame.Text:SetText(Addon.L["Click to search further back..."])
 
 	frame:SetScript("OnClick", function() self:HeaderRow_OnClick() end)
+end
+
+--- @private
+--- @param frame TableFrameUI.TableRowSession
+--- @param data { sessionId: integer }
+function Table:SetupSessionRow(frame, data)
+	if data.sessionId == math.huge then
+		frame.Text:SetText(Addon.L["Current session"])
+	else
+		frame.Text:SetText(Addon.L["Session %d"]:format(data.sessionId))
+	end
 end
 
 --- @private

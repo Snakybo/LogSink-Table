@@ -81,6 +81,7 @@ end
 function LogSinkTable:OnInitialize()
 	--- @class LogSinkTableDB
 	--- @field public currentFilter? string
+	--- @field public currentSessionOnly? boolean
 	--- @field public columns? ColumnConfig[]
 	LogSinkTableDB = LogSinkTableDB or {}
 

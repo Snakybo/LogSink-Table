@@ -7,6 +7,7 @@ local SCAN_BUDGET_MS = (1 / 30) * 1000
 --- @class ChunkedBufferReader : BufferReader
 --- @field public onBufferSet? fun()
 --- @field public onMessageAdded? fun()
+--- @field public evaluate? fun(entry: LibLog-1.0.LogMessage)
 --- @field private first integer
 --- @field private last integer
 --- @field private buffer LibLog-1.0.LogMessage[]
@@ -116,8 +117,17 @@ function Reader:LoadImpl(start, dir)
 		scanned = scanned + 1
 
 		local entry = self.buffer[current]
+		local valid = true
 
-		if self.filter == nil or self.filter:Evaluate(entry) then
+		if valid and self.evaluate ~= nil and not self.evaluate(entry) then
+			valid = false
+		end
+
+		if valid and self.filter ~= nil and not self.filter:Evaluate(entry) then
+			valid = false
+		end
+
+		if valid then
 			table.insert(result, entry)
 		end
 	end

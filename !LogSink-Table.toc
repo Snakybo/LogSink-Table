@@ -33,6 +33,7 @@ TableFrame.lua
 TableFrameTemplates.xml
 TableFrameUI\Filter.lua
 TableFrameUI\Header.lua
+TableFrameUI\Options.lua
 TableFrameUI\Status.lua
 TableFrameUI\Table.lua
 

@@ -48,3 +48,6 @@ L["Log Inspector"] = true
 L["Copy key"] = true
 L["Focus"] = true
 L["Focusing..."] = true
+L["Session %d"] = true
+L["Current session"] = true
+L["Filter to current session"] = true

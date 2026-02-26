@@ -18,10 +18,10 @@
 		<Size x="1" y="22"/>
 		<Layers>
 			<Layer level="BACKGROUND">
-                <Texture parentKey="Background" setAllPoints="true" hidden="true">
-                    <Color r="0.05" g="0.05" b="0.05" a="0.5"/>
-                </Texture>
-            </Layer>
+				<Texture parentKey="Background" setAllPoints="true" hidden="true">
+					<Color r="0.05" g="0.05" b="0.05" a="0.5"/>
+				</Texture>
+			</Layer>
 
 			<Layer level="OVERLAY">
 				<Texture parentKey="Highlight" setAllPoints="true" hidden="true">
@@ -37,14 +37,46 @@
 	</Button>
 
 	<Button name="LogTableRowHeaderTemplate" virtual="true">
-		<Size x="1" y="22"/>
+		<Size x="1" y="18"/>
 		<Layers>
 			<Layer level="ARTWORK">
 				<FontString parentKey="Text" inherits="ChatFontNormal">
-					<Anchors><Anchor point="CENTER"/></Anchors>
+					<Anchors>
+						<Anchor point="CENTER"/>
+					</Anchors>
 				</FontString>
 			</Layer>
 		</Layers>
 		<HighlightTexture file="Interface\QuestFrame\UI-QuestTitleHighlight" alphaMode="ADD"/>
 	</Button>
+
+	<Frame name="LogTableRowSessionTemplate" virtual="true">
+		<Size x="1" y="18"/>
+		<Layers>
+			<Layer level="ARTWORK">
+				<FontString parentKey="Text" inherits="ChatFontNormal">
+					<Anchors>
+						<Anchor point="CENTER"/>
+					</Anchors>
+					<Color r="1" g="0.82" b="0"/>
+				</FontString>
+			</Layer>
+			<Layer level="BACKGROUND">
+				<Texture parentKey="LineLeft">
+					<Size x="140" y="2"/>
+					<Anchors>
+						<Anchor point="RIGHT" relativeKey="$parent.Text" relativePoint="LEFT" x="-15" y="0"/>
+					</Anchors>
+					<Color r="1" g="0.82" b="0" a="0.3"/>
+				</Texture>
+				<Texture parentKey="LineRight">
+					<Size x="140" y="2"/>
+					<Anchors>
+						<Anchor point="LEFT" relativeKey="$parent.Text" relativePoint="RIGHT" x="15" y="0"/>
+					</Anchors>
+					<Color r="1" g="0.82" b="0" a="0.3"/>
+				</Texture>
+			</Layer>
+		</Layers>
+	</Frame>
 </Ui>
