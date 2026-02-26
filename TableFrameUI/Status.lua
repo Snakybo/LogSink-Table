@@ -22,6 +22,7 @@ function Status.Create(parent)
 	return result
 end
 
+--- @param text string
 function Status:SetText(text)
 	self.status = text
 
