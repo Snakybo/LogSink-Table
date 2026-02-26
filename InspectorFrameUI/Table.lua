@@ -145,6 +145,10 @@ function Table:SetupRow(frame, data)
 	frame.Value:SetText(Serialize(data.value))
 
 	frame:SetScript("OnMouseDown", function(_, button) self:Row_OnMouseDown(frame, button, data) end)
+
+	frame.Key:SetScript("OnEnter", function() self:Cell_Key_OnEnter(frame, data) end)
+	frame.Key:SetScript("OnLeave", function() self:Cell_Key_OnLeave(frame, data) end)
+	frame.Key:SetScript("OnMouseDown", function(_, button) self:Row_OnMouseDown(frame, button, data) end)
 end
 
 --- @param frame InspectorFrameUI.TableRow
@@ -188,6 +192,20 @@ function Table:Row_OnMouseDown(frame, button, data)
 			Addon.TableFrame:AppendQueryString(filter)
 		end)
 	end)
+end
+
+--- @param frame InspectorFrameUI.TableRow
+--- @param data InspectorFrameUI.ElementData
+function Table:Cell_Key_OnEnter(frame, data)
+	GameTooltip:SetOwner(frame, "ANCHOR_TOPLEFT")
+	GameTooltip:SetText(data.key, 1, 1, 1, 1)
+	GameTooltip:Show()
+end
+
+--- @param frame InspectorFrameUI.TableRow
+--- @param data InspectorFrameUI.ElementData
+function Table:Cell_Key_OnLeave(frame, data)
+	GameTooltip:Hide()
 end
 
 --- @class InspectorFrame
