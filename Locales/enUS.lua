@@ -23,6 +23,7 @@ end
 L["Time"] = true
 L["Level"] = true
 L["Addon"] = true
+L["Module"] = true
 L["Message"] = true
 L["Log Viewer"] = true
 L["Processed %d entries and found %d matches in %.2fms"] = true

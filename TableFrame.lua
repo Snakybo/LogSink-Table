@@ -72,6 +72,9 @@ local COLUMN_VISUALIZERS = {
 	["addon"] = {
 		name = Addon.L["Addon"]
 	},
+	["module"] = {
+		name = Addon.L["Module"]
+	},
 	["message"] = {
 		name = Addon.L["Message"]
 	}
