@@ -6,6 +6,7 @@ local Addon = select(2, ...)
 --- @field public value unknown
 --- @field public keyWidth? number
 --- @field public height? number
+--- @field public raw? table
 
 --- @class InspectorFrameUI.TableRow : Frame
 --- @field public Key FontString
@@ -28,7 +29,26 @@ local COLOR_SCHEME = {
 
 local ROW_HEIGHT = 22
 
---- @param data LibLog-1.0.LogMessage
+--- Resolves a format string by substituting `{key}` and `{key:fmt}` placeholders.
+--- @param fmt string
+--- @param data table
+--- @return string
+local function FormatString(fmt, data)
+	return (string.gsub(fmt, "{(%w+):?(.-)}", function(key, format)
+		local value = data[key]
+		if value == nil then
+			return "{" .. key .. "}"
+		end
+
+		if format ~= "" then
+			return string.format("%" .. format, value)
+		end
+
+		return tostring(value)
+	end))
+end
+
+--- @param data unknown
 --- @param prefix? string
 --- @param result? InspectorFrameUI.ElementData[]
 --- @return InspectorFrameUI.ElementData[]
@@ -40,10 +60,20 @@ local function FlattenData(data, prefix, result)
 		local path = string.gsub(prefix .. tostring(k), "^properties%.", "")
 
 		if type(v) == "table" then
-			FlattenData(v, path, result)
+			if type(v._fmt) == "string" then
+				--- @type InspectorFrameUI.ElementData
+				table.insert(result, {
+					key = path,
+					value = FormatString(v._fmt, v),
+					raw = v
+				})
+			else
+				FlattenData(v, path, result)
+			end
 		elseif type(v) == "nil" then
 			-- ignore nils
 		else
+			--- @type InspectorFrameUI.ElementData
 			table.insert(result, {
 				key = path,
 				value = v
@@ -160,8 +190,12 @@ function Table:SetupRow(frame, data)
 	frame:SetScript("OnMouseDown", function(_, button) self:Row_OnMouseDown(frame, button, data) end)
 
 	frame.Key:SetScript("OnEnter", function() self:Cell_Key_OnEnter(frame, data) end)
-	frame.Key:SetScript("OnLeave", function() self:Cell_Key_OnLeave(frame, data) end)
+	frame.Key:SetScript("OnLeave", function() self:Cell_Key_OnLeave() end)
 	frame.Key:SetScript("OnMouseDown", function(_, button) self:Row_OnMouseDown(frame, button, data) end)
+
+	frame.Value:SetScript("OnEnter", function() self:Cell_Value_OnEnter(frame, data) end)
+	frame.Value:SetScript("OnLeave", function() self:Cell_Value_OnLeave(data) end)
+	frame.Value:SetScript("OnMouseDown", function(_, button) self:Row_OnMouseDown(frame, button, data) end)
 end
 
 --- @param frame InspectorFrameUI.TableRow
@@ -180,6 +214,12 @@ function Table:Row_OnMouseDown(frame, button, data)
 		root:CreateButton(Addon.L["Copy value"], function()
 			StaticPopup_Show("LOGSINK_COPY_TEXT", nil, nil, tostring(data.value))
 		end)
+
+		if data.raw ~= nil then
+			root:CreateButton(Addon.L["Copy data"], function()
+				StaticPopup_Show("LOGSINK_COPY_TEXT",  nil, nil, Addon.Serialize(data.raw, "\t", "\n"))
+			end)
+		end
 
 		root:CreateButton(Addon.L["Add filter"], function()
 			local filter = data.key .. " = "
@@ -215,9 +255,45 @@ function Table:Cell_Key_OnEnter(frame, data)
 	GameTooltip:Show()
 end
 
+function Table:Cell_Key_OnLeave()
+	GameTooltip:Hide()
+end
+
 --- @param frame InspectorFrameUI.TableRow
 --- @param data InspectorFrameUI.ElementData
-function Table:Cell_Key_OnLeave(frame, data)
+function Table:Cell_Value_OnEnter(frame, data)
+	if data.raw == nil then
+		return
+	end
+
+	GameTooltip:SetOwner(frame, "ANCHOR_TOPLEFT")
+	GameTooltip:SetText(data.key, 1, 1, 1, 1)
+
+	local order = {}
+
+	for k in pairs(data.raw) do
+		table.insert(order, k)
+	end
+
+	table.sort(order)
+
+	for _, k in ipairs(order) do
+		local v = data.raw[k]
+
+		if k ~= "_fmt" then
+			GameTooltip:AddDoubleLine(tostring(k), tostring(v), 1, 0.82, 0.3, 1, 1, 1)
+		end
+	end
+
+	GameTooltip:Show()
+end
+
+--- @param data InspectorFrameUI.ElementData
+function Table:Cell_Value_OnLeave(data)
+	if data.raw == nil then
+		return
+	end
+
 	GameTooltip:Hide()
 end
 

@@ -78,6 +78,7 @@ local function HandleChatCommand(input)
 	end
 end
 
+--- @protected
 function LogSinkTable:OnInitialize()
 	--- @class LogSinkTableDB
 	--- @field public currentFilter? string
@@ -93,6 +94,39 @@ function LogSinkTable:OnInitialize()
 			self:LogVerbose("Restored {count} messages from saved variables", #buffer)
 		end)
 	end
+end
+
+--- @param tbl table
+--- @param indentChar string
+--- @param sepChar string
+--- @param indent? string
+--- @param escape? boolean
+function Addon.Serialize(tbl, indentChar, sepChar, indent, escape)
+	indent = indent or ""
+
+	if type(tbl) == "table" then
+		local nextIndent = indent .. indentChar
+		local lines = {
+			"{"
+		}
+
+		for k, v in pairs(tbl) do
+			local key = type(k) == "string" and k or "[" .. tostring(k) .. "]"
+
+			if key ~= "_fmt" then
+				local value = Addon.Serialize(v, indentChar, sepChar, nextIndent, true)
+				table.insert(lines, string.format("%s%s = %s,", nextIndent, key, value))
+			end
+		end
+
+		table.insert(lines, indent .. "}")
+
+		return table.concat(lines, sepChar)
+	elseif escape and type(tbl) == "string" then
+		return string.format("%q", tbl)
+	end
+
+	return tostring(tbl or "")
 end
 
 LibLog:RegisterSink(LogSinkTable.name, OnLogReceived)

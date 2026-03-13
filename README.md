@@ -115,3 +115,24 @@ The table view allows you to view the (filtered) log stream in real-time.
 You can add, remove, or adjust columns based on any available property within the logs, allowing you to quickly extract useful information. You can also copy data from an individual cell, or add filters for the cell value directly from a context menu.
 
 Clicking on a row opens a dedicated inspection window, this will show a breakdown of all log properties in a simple list.
+
+## Advanced features
+
+### Inspector formatting
+
+The inspector view can quickly get cluttered when adding multiple tables as log properties, to mitigate this, you can add a special `_fmt` property to any table property. This should be a string and follows the same Message Template syntax as LibLog-1.0, allowing you to specify a custom summary and formatting rules for the table that will be shown in the inspector.
+
+```lua
+{
+	min = 0.00059999898076057,
+	total = 0.19739998877048,
+	count = 240,
+	max = 0.0016000010073185,
+	mean = 0.00082249995321035,
+	percentage = 0.021088390565347,
+
+	_fmt = "{total:.2f}ms (min: {min:.2f}ms, max: {max:.2f}ms, mean: {mean:.2f}ms, count: {count})"
+}
+```
+
+When present, a single string property will be shown in the inspector instead of the full table. The full table is still available in the inspector as a tooltip, you can also copy the full table data from the context menu.

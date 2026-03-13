@@ -34,37 +34,6 @@ Table.MARKER_SESSION = "session"
 local SPECIAL_ROW_HEIGHT = 18
 local ROW_HEIGHT = 22
 
---- @param tbl table
---- @param indentChar string
---- @param sepChar string
---- @param indent? string
---- @param escape? boolean
-local function Serialize(tbl, indentChar, sepChar, indent, escape)
-	indent = indent or ""
-
-	if type(tbl) == "table" then
-		local nextIndent = indent .. indentChar
-		local lines = {
-			"{"
-		}
-
-		for k, v in pairs(tbl) do
-			local key = type(k) == "string" and k or "[" .. tostring(k) .. "]"
-			local value = Serialize(v, indentChar, sepChar, nextIndent, true)
-
-			table.insert(lines, string.format("%s%s = %s,", nextIndent, key, value))
-		end
-
-		table.insert(lines, indent .. "}")
-
-		return table.concat(lines, sepChar)
-	elseif escape and type(tbl) == "string" then
-		return string.format("%q", tbl)
-	end
-
-	return tostring(tbl or "")
-end
-
 --- @param config ColumnConfig
 --- @param entry LibLog-1.0.LogMessage
 --- @return unknown
@@ -245,7 +214,7 @@ function Table:SetupRow(frame, entry)
 			cell:SetPoint("RIGHT", frame:GetParent(), "RIGHT")
 		end
 
-		cell.Text:SetText(Serialize(GetValue(config, entry), "", " "))
+		cell.Text:SetText(Addon.Serialize(GetValue(config, entry), "", " "))
 	end
 
 	for i = #self.columns + 1, #frame.cells do
@@ -340,7 +309,7 @@ function Table:LogCell_OnMouseUp(frame, button)
 		copyValue:SetEnabled(type(value) ~= "nil")
 
 		root:CreateButton(Addon.L["Copy data"], function()
-			StaticPopup_Show("LOGSINK_COPY_TEXT",  nil, nil, Serialize(frame.data, "\t", "\n"))
+			StaticPopup_Show("LOGSINK_COPY_TEXT",  nil, nil, Addon.Serialize(frame.data, "\t", "\n"))
 		end)
 
 		local addFilter = root:CreateButton(Addon.L["Add filter"], function()
