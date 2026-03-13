@@ -117,21 +117,22 @@ function Table:SetData(data)
 		local width = self.scrollBox:GetWidth()
 
 		for i = 1, #flattened do
-			local item = flattened[i]
-
-			self.measureText:SetWidth(0)
-			self.measureText:SetText(item.key)
-			item.keyWidth = min(width * 0.4, self.measureText:GetStringWidth())
-
-			self.measureText:SetWidth(width - item.keyWidth)
-			self.measureText:SetText(tostring(item.value))
-
-			local height = self.measureText:GetStringHeight()
-			item.height = ceil(height / ROW_HEIGHT) * ROW_HEIGHT
+			self:UpdateItemMeasurements(flattened[i], width)
 		end
 
 		self.dataProvider:InsertTable(flattened)
 	end
+end
+
+function Table:Redraw()
+	local items = self.dataProvider:GetCollection()
+	local width = self.scrollBox:GetWidth()
+
+	for i = 1, #items do
+		self:UpdateItemMeasurements(items[i], width)
+	end
+
+	self.scrollBox:Rebuild(true)
 end
 
 --- @private
@@ -170,6 +171,22 @@ function Table:Init()
 	end, true)
 
     self.scrollBox:SetDataProvider(self.dataProvider)
+end
+
+
+--- @private
+--- @param item InspectorFrameUI.ElementData
+--- @param width number
+function Table:UpdateItemMeasurements(item, width)
+	self.measureText:SetWidth(0)
+	self.measureText:SetText(item.key)
+	item.keyWidth = min(width * 0.4, self.measureText:GetStringWidth())
+
+	self.measureText:SetWidth(width - item.keyWidth)
+	self.measureText:SetText(tostring(item.value))
+
+	local height = self.measureText:GetStringHeight()
+	item.height = ceil(height / ROW_HEIGHT) * ROW_HEIGHT
 end
 
 --- @private

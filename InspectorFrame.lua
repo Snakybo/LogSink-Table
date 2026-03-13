@@ -70,11 +70,44 @@ function InspectorFrame:CreateFrame()
 	self.frame:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 0, 0)
 	self.frame:SetWidth(400)
 	self.frame:SetFrameStrata("HIGH")
+	self.frame:SetResizable(true)
+	self.frame:SetResizeBounds(400, 300)
+	self.frame:SetScript("OnSizeChanged", function() self:Frame_OnSizeChanged() end)
 
 	self.frame.CloseButton = CreateFrame("Button", nil, self.frame, "UIPanelCloseButtonDefaultAnchors")
 	self.frame.CloseButton:SetScript("OnClick", function() self:Frame_CloseButton_OnClick() end)
 
 	self.frame.TitleContainer.TitleText:SetText(Addon.L["Log Inspector"])
+
+	self:CreateFrameResizers()
+end
+
+--- @private
+function InspectorFrame:CreateFrameResizers()
+	local function OnMouseDown()
+		self.frame:StartSizing("RIGHT")
+	end
+
+	local function OnMouseUp()
+		local parent = Addon.TableFrame.frame
+
+		self.frame:StopMovingOrSizing()
+
+		local width = self.frame:GetWidth()
+
+		self.frame:ClearAllPoints()
+		self.frame:SetPoint("TOPLEFT", parent, "TOPRIGHT", 0, 0)
+		self.frame:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 0, 0)
+		self.frame:SetWidth(width)
+	end
+
+	local e = CreateFrame("Frame", nil, self.frame)
+	e:SetPoint("BOTTOMRIGHT", 0, 25)
+	e:SetPoint("TOPRIGHT")
+	e:SetWidth(25)
+	e:EnableMouse(true)
+	e:SetScript("OnMouseDown", OnMouseDown)
+	e:SetScript("OnMouseUp",OnMouseUp)
 end
 
 --- @private
@@ -99,6 +132,11 @@ function InspectorFrame:Frame_CloseButton_OnClick()
 	if self.onClose ~= nil then
 		self.onClose()
 	end
+end
+
+--- @private
+function InspectorFrame:Frame_OnSizeChanged()
+	self.table:Redraw()
 end
 
 --- @private
