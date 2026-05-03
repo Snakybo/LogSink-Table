@@ -1,0 +1,19 @@
+{
+	"ignore": [],
+	"flavors": ["retail", "classic", "classic_era"],
+	"globals": {
+		"read": [
+			"LogSinkSavedVariables",
+			"BugGrabber"
+		]
+	},
+	"diagnostics": {
+		"enable": [
+			"need-check-nil",
+			"unknown-param-type",
+			"unknown-return-type",
+			"unknown-local-type",
+			"unknown-field-type"
+		]
+	}
+}
