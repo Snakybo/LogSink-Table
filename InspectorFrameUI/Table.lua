@@ -186,7 +186,7 @@ function Table:UpdateItemMeasurements(item, width)
 	self.measureText:SetText(tostring(item.value))
 
 	local height = self.measureText:GetStringHeight()
-	item.height = ceil(height / ROW_HEIGHT) * ROW_HEIGHT
+	item.height = min(max(1, ceil(height / ROW_HEIGHT)) * ROW_HEIGHT, 200)
 end
 
 --- @private

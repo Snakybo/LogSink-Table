@@ -4,7 +4,7 @@
 ## Notes: A log sink for LibLog-1.0 that captures logs and displays them in a table which can be filtered upon.
 ## Version: @project-version@
 ## SavedVariables: LogSinkTableDB
-## OptionalDeps: LogSink: SavedVariables
+## OptionalDeps: LogSink: SavedVariables, BugGrabber
 ## Category: Development Tools
 ## Category-deDE: Entwicklungstools
 ## Category-esES: Herramientas de Desarrollo

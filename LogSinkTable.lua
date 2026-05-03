@@ -92,8 +92,119 @@ function LogSinkTable:OnInitialize()
 		LogSinkSavedVariables:GetBufferWhenAvailable(function(buffer)
 			Addon.Buffer:SetBuffer(buffer)
 			self:LogVerbose("Restored {count} messages from saved variables", #buffer)
+
+			Addon:HookPrint()
+			Addon:HookError()
+			Addon:HookBugGrabber()
 		end)
+	else
+		Addon:HookPrint()
+		Addon:HookError()
+		Addon:HookBugGrabber()
 	end
+end
+
+function Addon:HookPrint()
+	local originalPrint = print
+
+	print = function(...)
+		originalPrint(...)
+
+		local n = select("#", ...)
+		local parts = {}
+
+		for i = 1, n do
+			parts[i] = tostring(select(i, ...))
+		end
+
+		local text = table.concat(parts, " ")
+		local logTime, sequenceId = LibLog:GetNextSequenceId()
+
+		--- @type LibLog-1.0.LogMessage
+		local message = {
+			message = text,
+			template = text,
+			addon = "?",
+			level = LibLog.LogLevel.INFO,
+			time = logTime,
+			sequenceId = sequenceId,
+			properties = {}
+		}
+
+		Addon.Buffer:Add(message)
+	end
+end
+
+function Addon:HookError()
+	local originalErrorHandler = geterrorhandler()
+
+	--- @param msg string
+	--- @return unknown
+	local function OnError(msg)
+		local logTime, sequenceId = LibLog:GetNextSequenceId()
+
+		--- @type LibLog-1.0.LogMessage
+		local message = {
+			message = msg,
+			template = msg,
+			addon = "?",
+			level = LibLog.LogLevel.ERROR,
+			time = logTime,
+			sequenceId = sequenceId,
+			properties = {}
+		}
+
+		Addon.Buffer:Add(message)
+
+		return originalErrorHandler(msg)
+	end
+
+	seterrorhandler(OnError)
+end
+
+function Addon:HookBugGrabber()
+	--- @param err table
+	local function OnError(err)
+		local logTime, sequenceId = LibLog:GetNextSequenceId()
+
+		--- @type LibLog-1.0.LogMessage
+		local message = {
+			message = err.message,
+			template = err.message,
+			addon = "?",
+			level = LibLog.LogLevel.FATAL,
+			time = logTime,
+			sequenceId = sequenceId,
+			properties = {
+				stack = err.stack,
+				locals = err.locals,
+				counter = err.counter,
+				session = err.session
+			}
+		}
+
+		Addon.Buffer:Add(message)
+	end
+
+	local function OnBugGrabbed(_, errorId)
+		local err = BugGrabber:GetErrorByID(errorId)
+
+		if err ~= nil then
+			OnError(err)
+		end
+	end
+
+	if BugGrabber ~= nil then
+		local sessionId = BugGrabber:GetSessionId()
+
+		for _, err in ipairs(BugGrabber:GetDB()) do
+			if sessionId == nil or err.session == sessionId then
+				OnError(err)
+			end
+		end
+	end
+
+	EventRegistry:RegisterCallback("BugGrabber.BugGrabbed", OnBugGrabbed, {})
 end
 
 --- @param tbl table
