@@ -16,6 +16,12 @@
 	<Button name="LogTableRowTemplate" virtual="true">
 		<Size x="1" y="22"/>
 		<Layers>
+			<Layer level="BACKGROUND" textureSubLevel="-1">
+				<Texture parentKey="LevelBackground" setAllPoints="true" hidden="true">
+					<Color r="0" g="0" b="0" a="0"/>
+				</Texture>
+			</Layer>
+
 			<Layer level="BACKGROUND">
 				<Texture parentKey="Background" setAllPoints="true" hidden="true">
 					<Color r="0.05" g="0.05" b="0.05" a="0.5"/>

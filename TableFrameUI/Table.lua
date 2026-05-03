@@ -1,3 +1,5 @@
+local LibLog = LibStub("LibLog-1.0")
+
 --- @class Addon
 local Addon = select(2, ...)
 
@@ -10,6 +12,7 @@ local Addon = select(2, ...)
 --- @field public cells TableFrameUI.TableCell[]
 --- @field public Highlight Texture
 --- @field public Background Texture
+--- @field public LevelBackground Texture
 
 --- @class TableFrameUI.TableRowHeader : Button
 --- @field public Text FontString
@@ -33,6 +36,13 @@ Table.MARKER_SESSION = "session"
 
 local SPECIAL_ROW_HEIGHT = 18
 local ROW_HEIGHT = 22
+
+--- @type table<LibLog-1.0.LogLevel, {r: number, g: number, b: number, a: number}>
+local LEVEL_BACKGROUND_COLORS = {
+	[LibLog.LogLevel.WARNING] = { r = 1.0, g = 0.81, b = 0.25, a = 0.06 },
+	[LibLog.LogLevel.ERROR] = { r = 1.0, g = 0.37, b = 0.37, a = 0.06 },
+	[LibLog.LogLevel.FATAL] = { r = 1.0, g = 0.0, b = 0.0, a = 0.06 },
+}
 
 --- @param config ColumnConfig
 --- @param entry LibLog-1.0.LogMessage
@@ -225,6 +235,14 @@ function Table:SetupRow(frame, entry)
 		frame.Background:Show()
 	else
 		frame.Background:Hide()
+	end
+
+	local background = LEVEL_BACKGROUND_COLORS[entry.level]
+	if background then
+		frame.LevelBackground:SetColorTexture(background.r, background.g, background.b, background.a)
+		frame.LevelBackground:Show()
+	else
+		frame.LevelBackground:Hide()
 	end
 
 	frame:SetScript("OnEnter", function(...) self:LogRow_OnEnter(...) end)
